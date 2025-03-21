@@ -1,0 +1,12 @@
+[build]
+  command = "npm i --legacy-peer-deps && npm run build:web"
+  publish = "dist"
+
+[dev]
+  command = "EXPO_NO_TELEMETRY=1 expo start --web"
+  targetPort = 19006
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
