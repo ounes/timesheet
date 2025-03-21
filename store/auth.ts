@@ -4,50 +4,64 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthState {
   isAuthenticated: boolean;
+  id: string | null;
   role: string | null;
-  agencie: string | null;
+  validatorId: string | null;
+  agencyId: string | null;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
 
 // Define mock user data
 const MOCK_USERS = [
-  { username: 'admin', password: 'admin', role: 'admin', agencie: 'all' },
+  { id: '1', username: 'admin', password: 'admin', role: 'admin', agencyId: '', validatorId: '' },
   {
+    id: '2',
     username: 'test1',
     password: 'test',
     role: 'employee',
-    agencie: 'societe1',
+    agencyId: 'societe1',
+    validatorId: ''
   },
   {
+    id: '3',
     username: 'agence1',
     password: 'agence',
-    role: 'agencie',
-    agencie: 'societe1',
+    role: 'agency',
+    agencyId: 'societe1',
+    validatorId: ''
   },
   {
+    id: '4',
     username: 'valid1',
     password: 'valid',
     role: 'validator',
-    agencie: 'societe1',
+    agencyId: 'societe1',
+    validatorId: ''
   },
   {
+    id: '5',
     username: 'test2',
     password: 'test',
     role: 'employee',
-    agencie: 'societe2',
+    agencyId: 'societe2',
+    validatorId: ''
   },
   {
+    id: '6',
     username: 'agence2',
     password: 'agence',
-    role: 'agencie',
-    agencie: 'societe2',
+    role: 'agency',
+    agencyId: 'societe2',
+    validatorId: ''
   },
   {
+    id: '7',
     username: 'valid2',
     password: 'valid',
     role: 'validator',
-    agencie: 'societe2',
+    agencyId: 'societe2',
+    validatorId: ''
   },
 ];
 
@@ -55,8 +69,10 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       isAuthenticated: false,
+      id: null,
       role: null,
-      agencie: null,
+      validatorId: null,
+      agencyId: null,
       login: async (username: string, password: string) => {
         const user = MOCK_USERS.find(
           (u) => u.username === username && u.password === password
@@ -65,8 +81,10 @@ export const useAuthStore = create<AuthState>()(
         if (user) {
           set({
             isAuthenticated: true,
+            id: user.id,
             role: user.role,
-            agencie: user.agencie,
+            validatorId: user.validatorId,
+            agencyId: user.agencyId,
           });
           return true;
         }

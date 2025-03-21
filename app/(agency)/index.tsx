@@ -21,9 +21,9 @@ import { useState, useMemo } from 'react';
 
 // MOCK DATA
 const MOCK_WORKERS = [
-  { id: 'w1', name: 'Alice Dupont', agencie: 'societe1' },
-  { id: 'w2', name: 'Bob Martin', agencie: 'societe1' },
-  { id: 'w3', name: 'Charlie Durand', agencie: 'societe2' },
+  { id: 'w1', name: 'Alice Dupont', agency: 'societe1' },
+  { id: 'w2', name: 'Bob Martin', agency: 'societe1' },
+  { id: 'w3', name: 'Charlie Durand', agency: 'societe2' },
 ];
 
 const MOCK_TIMESHEETS = [
@@ -111,8 +111,8 @@ function getEndOfMonth(date: Date): Date {
 }
 
 export default function AdminDashboardScreen() {
-  const agencie = useAuthStore((state) => state.agencie);
-  const workers = MOCK_WORKERS.filter((wk) => wk.agencie === agencie);
+  const agency = useAuthStore((state) => state.agency);
+  const workers = MOCK_WORKERS.filter((wk) => wk.agency === agency);
   const timesheets = MOCK_TIMESHEETS.filter((ts) =>
     workers.some((worker) => worker.id === ts.idWorker)
   );

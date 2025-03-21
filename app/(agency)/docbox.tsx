@@ -14,18 +14,18 @@ import { ArrowLeft, Download, File, Upload } from 'lucide-react-native';
 
 // MOCKED DATA (using only idWorker for document-worker relation)
 const MOCK_WORKERS = [
-  { id: 'w1', name: 'Jean Dupont', position: 'Ouvrier', agencie: 'societe1' },
+  { id: 'w1', name: 'Jean Dupont', position: 'Ouvrier', agency: 'societe1' },
   {
     id: 'w2',
     name: 'Marie Curie',
     position: 'Chef de chantier',
-    agencie: 'societe1',
+    agency: 'societe1',
   },
   {
     id: 'w3',
     name: 'Pierre Martin',
     position: 'Électricien',
-    agencie: 'societe2',
+    agency: 'societe2',
   },
 ];
 
@@ -136,8 +136,8 @@ function DocumentGrid({
 }
 
 export default function DocBoxScreen() {
-  const agencie = useAuthStore((state) => state.agencie);
-  const workers = MOCK_WORKERS.filter((wk) => wk.agencie === agencie);
+  const agency = useAuthStore((state) => state.agency);
+  const workers = MOCK_WORKERS.filter((wk) => wk.agency === agency);
   // Filter documents by matching idWorker
   const documents = MOCK_DOCUMENTS.filter((doc) =>
     workers.some((worker) => worker.id === doc.idWorker)

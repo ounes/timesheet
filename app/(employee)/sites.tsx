@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MapPin, Calendar, Phone, User, Info } from 'lucide-react-native';
+import { useAuthStore } from '@/store/auth';
 
 const MOCK_SITES = [
   {
@@ -14,6 +15,7 @@ const MOCK_SITES = [
     image:
       'https://images.unsplash.com/photo-1488972685288-c3fd157d7c7a?auto=format&fit=crop&q=80&w=800&h=400',
     notes: 'Prendre la A46',
+    agencyId: 'societe1'
   },
 ];
 
@@ -70,6 +72,8 @@ function SiteCard({ site }: { site: (typeof MOCK_SITES)[0] }) {
 }
 
 export default function SitesScreen() {
+  const agencyId = useAuthStore((state) => state.agencyId);
+  const filteredSites = MOCK_SITES.filter((site) => agencyId === site.agencyId);
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
@@ -79,7 +83,7 @@ export default function SitesScreen() {
         </View>
 
         <View style={styles.sitesContainer}>
-          {MOCK_SITES.map((site) => (
+          {filteredSites.map((site) => (
             <SiteCard key={site.id} site={site} />
           ))}
         </View>

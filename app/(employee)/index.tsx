@@ -7,10 +7,10 @@ import {
   FlatList,
   TextInput,
   Platform,
-  Modal,
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/store/auth';
 import {
   Clock,
   CircleAlert as AlertCircle,
@@ -34,18 +34,36 @@ const MOCK_SITES = [
     name: 'Chantier Paris Centre',
     type: 'Chantier',
     address: '123 Rue de Rivoli, 75001 Paris',
+    agencyId: 'societe1'
   },
   {
     id: '2',
     name: 'Bureau Lyon',
     type: 'Bureau',
     address: '45 Avenue Jean Jaurès, 69007 Lyon',
+    agencyId: 'societe1'
   },
   {
     id: '3',
     name: 'Site Marseille Port',
     type: 'Site Industriel',
     address: '88 Quai du Port, 13002 Marseille',
+    agencyId: 'societe1'
+  },
+  // duplicated for scroll test...
+  {
+    id: '4',
+    name: 'Chantier Lille Centre',
+    type: 'Chantier',
+    address: '10 Rue de Lille, 59000 Lille',
+    agencyId: 'societe1'
+  },
+  {
+    id: '5',
+    name: 'Bureau Nantes',
+    type: 'Bureau',
+    address: '25 Rue de Nantes, 44000 Nantes',
+    agencyId: 'societe1'
   },
 ];
 
@@ -61,6 +79,7 @@ const MOCK_TIMESHEETS = [
     panier: false,
     trajetId: '',
     transportId: '',
+    workerId: '2'
   },
   {
     id: '2',
@@ -73,6 +92,7 @@ const MOCK_TIMESHEETS = [
     panier: false,
     trajetId: '',
     transportId: '',
+    workerId: '2'
   },
   {
     id: '3',
@@ -85,6 +105,7 @@ const MOCK_TIMESHEETS = [
     panier: false,
     trajetId: '',
     transportId: '',
+    workerId: '2'
   },
 ];
 
@@ -124,15 +145,16 @@ function KPICard({
 }
 
 interface TimesheetFormData {
+  workerId: string | null;
   id?: string;
   date: Date;
   siteId: string;
   hours: string;
   hoursSup: string;
-  notes: string;
+  notes: string | undefined;
   panier: boolean;
-  trajetId: string;
-  transportId: string;
+  trajetId: string | null;
+  transportId: string | null;
   status?: string;
 }
 
@@ -145,6 +167,9 @@ function TimesheetForm({
   onCancel: () => void;
   initialData?: (typeof MOCK_TIMESHEETS)[0];
 }) {
+  const userId = useAuthStore((state) => state.id);
+  const agencyId = useAuthStore((state) => state.agencyId);
+  const filteredSites = MOCK_SITES.filter((site) => agencyId === site.agencyId);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSiteSelector, setShowSiteSelector] = useState(false);
   const [showTrajetSelector, setShowTrajetSelector] = useState(false);
@@ -159,9 +184,10 @@ function TimesheetForm({
     panier: initialData?.panier || false,
     trajetId: initialData?.trajetId || '',
     transportId: initialData?.transportId || '',
+    workerId: initialData?.workerId || userId,
   });
 
-  const selectedSite = MOCK_SITES.find((site) => site.id === formData.siteId);
+  const selectedSite = filteredSites.find((site) => site.id === formData.siteId);
   const selectedTrajet = MOCK_TRAJETS.find(
     (trajet) => trajet.id === formData.trajetId
   );
@@ -185,9 +211,10 @@ function TimesheetForm({
           : 'Nouvelle Feuille de Temps'}
       </Text>
 
+      {/* Date selection rendered inline */}
       <Pressable
         style={styles.datePickerButton}
-        onPress={() => setShowDatePicker(true)}
+        onPress={() => setShowDatePicker(!showDatePicker)}
       >
         <Calendar size={20} color="#666666" />
         <Text style={styles.datePickerText}>
@@ -197,43 +224,44 @@ function TimesheetForm({
             year: 'numeric',
           })}
         </Text>
+        <ChevronDown size={20} color="#666666" />
       </Pressable>
-
-      {showDatePicker && Platform.OS !== 'web' && (
-        <DateTimePicker
-          value={formData.date}
-          mode="date"
-          display="default"
-          onChange={(event, selectedDate) => {
-            setShowDatePicker(false);
-            if (selectedDate)
-              setFormData((prev) => ({ ...prev, date: selectedDate }));
-          }}
-        />
+      {showDatePicker && (
+        <>
+          {Platform.OS !== 'web' ? (
+            <DateTimePicker
+              value={formData.date}
+              mode="date"
+              display="inline"
+              onChange={(event, selectedDate) => {
+                if (selectedDate) {
+                  setFormData((prev) => ({ ...prev, date: selectedDate }));
+                }
+              }}
+            />
+          ) : (
+            <input
+              type="date"
+              value={formData.date.toISOString().split('T')[0]}
+              onChange={(e) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  date: new Date(e.target.value),
+                }));
+              }}
+              onReset={(e) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  date: new Date(),
+                }));
+              }}
+              style={styles.webDatePicker}
+            />
+          )}
+        </>
       )}
 
-      {Platform.OS === 'web' && showDatePicker && (
-        <input
-          type="date"
-          value={formData.date.toISOString().split('T')[0]}
-          onChange={(e) => {
-            setFormData((prev) => ({
-              ...prev,
-              date: new Date(e.target.value),
-            }));
-            setShowDatePicker(false);
-          }}
-          style={{
-            fontSize: 16,
-            padding: 8,
-            marginBottom: 16,
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: '#E0E0E0',
-          }}
-        />
-      )}
-
+      {/* Inline Site selector */}
       <View style={styles.formRow}>
         <View style={styles.formLabelContainer}>
           <Text style={styles.formLabel}>Site de Travail</Text>
@@ -249,7 +277,7 @@ function TimesheetForm({
             styles.siteSelector,
             !formData.siteId && styles.siteSelectorEmpty,
           ]}
-          onPress={() => setShowSiteSelector(true)}
+          onPress={() => setShowSiteSelector(!showSiteSelector)}
         >
           {selectedSite ? (
             <View style={styles.selectedSiteContent}>
@@ -268,21 +296,9 @@ function TimesheetForm({
           )}
           <ChevronDown size={20} color="#666666" />
         </Pressable>
-      </View>
-
-      {/* Modal for Site selection */}
-      <Modal
-        visible={showSiteSelector}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSiteSelector(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowSiteSelector(false)}
-        >
-          <View style={styles.modalContent}>
-            {MOCK_SITES.map((site) => (
+        {showSiteSelector && (
+          <ScrollView style={styles.selectorList} nestedScrollEnabled>
+            {filteredSites.map((site) => (
               <Pressable
                 key={site.id}
                 style={[
@@ -313,9 +329,9 @@ function TimesheetForm({
                 </View>
               </Pressable>
             ))}
-          </View>
-        </Pressable>
-      </Modal>
+          </ScrollView>
+        )}
+      </View>
 
       <View style={styles.formRow}>
         <Text style={styles.formLabel}>Heures</Text>
@@ -345,7 +361,6 @@ function TimesheetForm({
         />
       </View>
 
-      {/* Panier Checkbox */}
       <View style={styles.formRow}>
         <Text style={styles.formLabel}>Panier</Text>
         <Switch
@@ -356,7 +371,7 @@ function TimesheetForm({
         />
       </View>
 
-      {/* Trajet Selector */}
+      {/* Inline Trajet selector */}
       <View style={styles.formRow}>
         <Text style={styles.formLabel}>Trajet</Text>
         <Pressable
@@ -364,7 +379,7 @@ function TimesheetForm({
             styles.siteSelector,
             !formData.trajetId && styles.siteSelectorEmpty,
           ]}
-          onPress={() => setShowTrajetSelector(true)}
+          onPress={() => setShowTrajetSelector(!showTrajetSelector)}
         >
           {selectedTrajet ? (
             <Text style={styles.siteSelectorText}>{selectedTrajet.label}</Text>
@@ -375,19 +390,8 @@ function TimesheetForm({
           )}
           <ChevronDown size={20} color="#666666" />
         </Pressable>
-      </View>
-
-      <Modal
-        visible={showTrajetSelector}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowTrajetSelector(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowTrajetSelector(false)}
-        >
-          <View style={styles.modalContent}>
+        {showTrajetSelector && (
+          <ScrollView style={styles.selectorList} nestedScrollEnabled>
             {MOCK_TRAJETS.map((trajet) => (
               <Pressable
                 key={trajet.id}
@@ -406,19 +410,18 @@ function TimesheetForm({
                 <Text
                   style={[
                     styles.siteOptionText,
-                    trajet.id === formData.trajetId &&
-                      styles.siteOptionSelected,
+                    trajet.id === formData.trajetId && styles.siteOptionSelected,
                   ]}
                 >
                   {trajet.label}
                 </Text>
               </Pressable>
             ))}
-          </View>
-        </Pressable>
-      </Modal>
+          </ScrollView>
+        )}
+      </View>
 
-      {/* Transport Selector */}
+      {/* Inline Transport selector */}
       <View style={styles.formRow}>
         <Text style={styles.formLabel}>Transport</Text>
         <Pressable
@@ -426,7 +429,7 @@ function TimesheetForm({
             styles.siteSelector,
             !formData.transportId && styles.siteSelectorEmpty,
           ]}
-          onPress={() => setShowTransportSelector(true)}
+          onPress={() => setShowTransportSelector(!showTransportSelector)}
         >
           {selectedTransport ? (
             <Text style={styles.siteSelectorText}>
@@ -439,19 +442,8 @@ function TimesheetForm({
           )}
           <ChevronDown size={20} color="#666666" />
         </Pressable>
-      </View>
-
-      <Modal
-        visible={showTransportSelector}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowTransportSelector(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowTransportSelector(false)}
-        >
-          <View style={styles.modalContent}>
+        {showTransportSelector && (
+          <ScrollView style={styles.selectorList} nestedScrollEnabled>
             {MOCK_TRANSPORTS.map((transport) => (
               <Pressable
                 key={transport.id}
@@ -479,9 +471,9 @@ function TimesheetForm({
                 </Text>
               </Pressable>
             ))}
-          </View>
-        </Pressable>
-      </Modal>
+          </ScrollView>
+        )}
+      </View>
 
       <View style={styles.formRow}>
         <Text style={styles.formLabel}>Notes</Text>
@@ -534,7 +526,9 @@ function TimesheetItem({
   onEdit: (timesheet: (typeof MOCK_TIMESHEETS)[0]) => void;
   onRemove: (timesheet: (typeof MOCK_TIMESHEETS)[0]) => void;
 }) {
-  const site = MOCK_SITES.find((s) => s.id === item.siteId);
+  const agencyId = useAuthStore((state) => state.agencyId);
+  const filteredSites = MOCK_SITES.filter((site) => agencyId === site.agencyId);
+  const site = filteredSites.find((s) => s.id === item.siteId);
 
   return (
     <View style={styles.timesheetItem}>
@@ -608,7 +602,6 @@ function TimesheetItem({
 function getStartOfWeek(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay();
-  // In France, the week starts on Monday. If Sunday (0), go back 6 days.
   const diff = d.getDate() - (day === 0 ? 6 : day - 1);
   return new Date(d.setDate(diff));
 }
@@ -625,17 +618,17 @@ function formatWeekLabel(weekStart: Date): string {
 }
 
 export default function DashboardScreen() {
+  const userId = useAuthStore((state) => state.id);
+  const filteredTimesheet = MOCK_TIMESHEETS.filter((ts) => userId === ts.workerId);
   const [showForm, setShowForm] = useState(false);
   const [editingTimesheet, setEditingTimesheet] = useState<
     (typeof MOCK_TIMESHEETS)[0] | null
   >(null);
-  const [timesheets, setTimesheets] = useState(MOCK_TIMESHEETS);
+  const [timesheets, setTimesheets] = useState(filteredTimesheet);
   const [selectedWeek, setSelectedWeek] = useState(getStartOfWeek(new Date()));
 
-  // Compute week boundary dates
   const weekEnd = new Date(selectedWeek.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  // Filter timesheets based on the selected week
   const weeklyTimesheets = useMemo(() => {
     return timesheets.filter((ts) => {
       const tsDate = new Date(ts.date);
@@ -677,7 +670,6 @@ export default function DashboardScreen() {
 
   const handleSubmit = (data: TimesheetFormData) => {
     if (editingTimesheet) {
-      // Update existing timesheet
       setTimesheets((prev) =>
         prev.map((ts) =>
           ts.id === editingTimesheet.id
@@ -687,17 +679,17 @@ export default function DashboardScreen() {
                 siteId: data.siteId,
                 hours: parseFloat(data.hours) || 0,
                 hoursSup: parseFloat(data.hoursSup) || 0,
-                notes: data.notes,
+                notes: data.notes || '',
                 panier: data.panier || false,
-                trajetId: data.trajetId,
-                transportId: data.transportId,
+                trajetId: data.trajetId || '',
+                transportId: data.transportId || '',
+                workerId: data.workerId || ''
               }
             : ts
         )
       );
       setEditingTimesheet(null);
     } else {
-      // Add new timesheet
       setTimesheets((prev) => [
         {
           id: Date.now().toString(),
@@ -705,11 +697,12 @@ export default function DashboardScreen() {
           siteId: data.siteId,
           hours: parseFloat(data.hours) || 0,
           hoursSup: parseFloat(data.hoursSup) || 0,
-          notes: data.notes,
+          notes: data.notes || '',
           status: 'En attente',
           panier: data.panier || false,
-          trajetId: data.trajetId,
-          transportId: data.transportId,
+          trajetId: data.trajetId || '',
+          transportId: data.transportId || '',
+          workerId: data.workerId || ''
         },
         ...prev,
       ]);
@@ -725,7 +718,6 @@ export default function DashboardScreen() {
           <Text style={styles.subtitle}>Aperçu de vos activités</Text>
         </View>
 
-        {/* Week navigation section */}
         <View style={styles.weekNavigation}>
           <Pressable onPress={handlePreviousWeek} style={styles.weekNavButton}>
             <ChevronLeft size={24} color="#007AFF" />
@@ -959,6 +951,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333333',
   },
+  webDatePicker: {
+    fontSize: 16,
+    padding: 8,
+    marginBottom: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
   formRow: {
     marginBottom: 16,
   },
@@ -1028,6 +1028,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999999',
     flex: 1,
+  },
+  selectorList: {
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    marginTop: 8,
   },
   siteOption: {
     padding: 12,
@@ -1146,19 +1153,6 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: '500',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    width: '80%',
-    maxHeight: '60%',
-    padding: 8,
   },
 });
 
