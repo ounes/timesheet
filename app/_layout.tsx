@@ -11,10 +11,9 @@ function useProtectedRoute() {
   const role = useAuthStore((state) => state.role);
 
   useEffect(() => {
-    const inAuthGroup = segments[0] === '(auth)';
-    const inProtectedGroup = segments.includes(`(${role})`);
+    const inAuthGroup = segments.includes('(auth)');
 
-    if (!isAuthenticated && inProtectedGroup) {
+    if (!isAuthenticated) {
       router.replace('/login');
     } else if (isAuthenticated && inAuthGroup) {
       router.replace(`/(${role})`);

@@ -180,5 +180,3 @@ const styles = StyleSheet.create({
     marginLeft: 15,
   },
 });
-
-export {};

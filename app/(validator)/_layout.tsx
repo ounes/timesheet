@@ -29,7 +29,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="sites"
+        name="users"
         options={{
           title: 'Salariés',
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
