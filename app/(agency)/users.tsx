@@ -36,7 +36,7 @@ const INITIAL_WORKERS = [
     password: 'pass1234',
     image:
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=800&h=400',
-    agencie: 'societe1',
+    agency: 'societe1',
   },
   {
     id: 'w2',
@@ -50,7 +50,7 @@ const INITIAL_WORKERS = [
     password: 'secret987',
     image:
       'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=800&h=400',
-    agencie: 'societe1',
+    agency: 'societe1',
   },
 ];
 
@@ -67,7 +67,7 @@ const INITIAL_VALIDATORS = [
     password: 'admin123',
     image:
       'https://images.unsplash.com/photo-1502767089025-6572583495b9?auto=format&fit=crop&q=80&w=800&h=400',
-    agencie: 'societe1',
+    agency: 'societe1',
   },
   {
     id: 'v2',
@@ -81,7 +81,7 @@ const INITIAL_VALIDATORS = [
     password: 'iso2022',
     image:
       'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&q=80&w=800&h=400',
-    agencie: 'societe2',
+    agency: 'societe2',
   },
 ];
 
@@ -299,10 +299,10 @@ function PersonForm({
 }
 
 export default function AdminHomePage() {
-  const agencie = useAuthStore((state) => state.agencie);
-  const workersAg = INITIAL_WORKERS.filter((wk) => wk.agencie == agencie);
+  const agency = useAuthStore((state) => state.agency);
+  const workersAg = INITIAL_WORKERS.filter((wk) => wk.agency == agency);
   const validatorsAg = INITIAL_VALIDATORS.filter(
-    (val) => val.agencie == agencie
+    (val) => val.agency == agency
   );
   const [activeTab, setActiveTab] = useState<'Workers' | 'Validators'>(
     'Workers'

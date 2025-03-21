@@ -9,16 +9,9 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  Grid2x2 as Grid,
-  List,
-  Download,
-  FileText,
-  File,
-  Upload,
-} from 'lucide-react-native';
+import { List, Download, FileText, File, Upload } from 'lucide-react-native';
 import { useState } from 'react';
-import Animated from 'react-native-reanimated';
+import { useAuthStore } from '@/store/auth';
 
 // MOCKED DATA – ajout de documents pour 2025 et 2024
 const MOCK_DOCUMENTS = [
@@ -30,6 +23,7 @@ const MOCK_DOCUMENTS = [
     modified: '2025-02-20T09:00:00',
     preview:
       'https://images.unsplash.com/photo-1626445877884-999529b1c51a?fit=crop&w=400&h=250',
+    workerId: '2'
   },
   {
     id: '2',
@@ -38,6 +32,7 @@ const MOCK_DOCUMENTS = [
     size: '1.2 MB',
     modified: '2025-01-15T14:30:00',
     preview: '',
+    workerId: '2'
   },
   {
     id: '3',
@@ -47,6 +42,7 @@ const MOCK_DOCUMENTS = [
     modified: '2024-02-19T10:30:00',
     preview:
       'https://images.unsplash.com/photo-1626445877884-999529b1c51a?fit=crop&w=400&h=250',
+    workerId: '2'
   },
   {
     id: '4',
@@ -55,6 +51,7 @@ const MOCK_DOCUMENTS = [
     size: '1.8 MB',
     modified: '2024-02-18T15:45:00',
     preview: '',
+    workerId: '3'
   },
 ];
 
@@ -73,62 +70,18 @@ function groupDocumentsByYear(documents: typeof MOCK_DOCUMENTS) {
   return groups;
 }
 
-interface DocumentGridProps {
+interface DocumentListProps {
   documents: typeof MOCK_DOCUMENTS;
-  viewMode: 'list' | 'grid';
   selectedDocument: string | null;
   onSelectDocument: (id: string) => void;
 }
 
-function DocumentGrid({
+function DocumentList({
   documents,
-  viewMode,
   selectedDocument,
   onSelectDocument,
-}: DocumentGridProps) {
+}: DocumentListProps) {
   const groups = groupDocumentsByYear(documents);
-
-  // Rendu d'un document en mode grid avec boutons si sélectionné
-  const renderGridItem = (document: (typeof MOCK_DOCUMENTS)[0]) => (
-    <Pressable
-      key={document.id}
-      style={[
-        styles.gridItem,
-        selectedDocument === document.id && styles.gridItemSelected,
-      ]}
-      onPress={() => onSelectDocument(document.id)}
-    >
-      {document.preview ? (
-        <Image
-          source={{ uri: document.preview }}
-          style={styles.documentPreview}
-        />
-      ) : (
-        <View style={styles.documentIcon}>
-          <FileText size={32} color="#1A73E8" />
-        </View>
-      )}
-      <Text style={styles.documentName} numberOfLines={2}>
-        {document.name}
-      </Text>
-      <Text style={styles.documentInfo}>
-        {document.size} • Modifié le{' '}
-        {new Date(document.modified).toLocaleDateString()}
-      </Text>
-      {selectedDocument === document.id && (
-        <View style={styles.gridActions}>
-          <Pressable style={styles.actionButton}>
-            <Download size={20} color="#1A73E8" />
-            <Text style={styles.actionButtonText}>Télécharger</Text>
-          </Pressable>
-          <Pressable style={styles.actionButton}>
-            <File size={20} color="#1A73E8" />
-            <Text style={styles.actionButtonText}>Ouvrir</Text>
-          </Pressable>
-        </View>
-      )}
-    </Pressable>
-  );
 
   // Rendu d'un document en mode liste avec boutons à droite si sélectionné
   const renderListItem = (document: (typeof MOCK_DOCUMENTS)[0]) => (
@@ -177,16 +130,8 @@ function DocumentGrid({
         .map((year) => (
           <View key={year}>
             <Text style={styles.yearTitle}>{year}</Text>
-            <View
-              style={[
-                viewMode === 'grid'
-                  ? styles.documentsContainer
-                  : styles.documentsContainerList,
-              ]}
-            >
-              {groups[year].map((doc) =>
-                viewMode === 'grid' ? renderGridItem(doc) : renderListItem(doc)
-              )}
+            <View style={styles.documentsContainerList}>
+              {groups[year].map((doc) => renderListItem(doc))}
             </View>
           </View>
         ))}
@@ -195,7 +140,8 @@ function DocumentGrid({
 }
 
 export default function DocBoxScreen() {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const userId = useAuthStore((state) => state.id);
+  const filteredDocuments = MOCK_DOCUMENTS.filter((doc) => userId === doc.workerId);
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
@@ -209,36 +155,15 @@ export default function DocBoxScreen() {
               <Text style={styles.title}>Mes documents</Text>
             </View>
             <View style={styles.headerRight}>
-              <Pressable
-                style={[
-                  styles.viewModeButton,
-                  viewMode === 'grid' && styles.viewModeButtonActive,
-                ]}
-                onPress={() => setViewMode('grid')}
-              >
-                <Grid
-                  size={20}
-                  color={viewMode === 'grid' ? '#1A73E8' : '#666666'}
-                />
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.viewModeButton,
-                  viewMode === 'list' && styles.viewModeButtonActive,
-                ]}
-                onPress={() => setViewMode('list')}
-              >
-                <List
-                  size={20}
-                  color={viewMode === 'list' ? '#1A73E8' : '#666666'}
-                />
+              {/* Grid mode removed – list mode is now the default view */}
+              <Pressable style={[styles.viewModeButton, styles.viewModeButtonActive]}>
+                <List size={20} color="#1A73E8" />
               </Pressable>
             </View>
           </View>
 
-          <DocumentGrid
-            documents={MOCK_DOCUMENTS}
-            viewMode={viewMode}
+          <DocumentList
+            documents={filteredDocuments}
             selectedDocument={selectedDocument}
             onSelectDocument={(id) => setSelectedDocument(id)}
           />
@@ -335,64 +260,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: '#202124',
   },
-  documentsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    marginBottom: 24,
-  },
   documentsContainerList: {
     flexDirection: 'column',
     gap: 16,
     marginBottom: 24,
-  },
-  gridItem: {
-    width: Platform.select({
-      web: 200,
-      default: '48%',
-    }),
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#E8EAED',
-    paddingBottom: 8,
-  },
-  gridItemSelected: {
-    borderColor: '#1A73E8',
-    backgroundColor: '#F0F9FF',
-  },
-  documentPreview: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#F1F3F4',
-  },
-  documentIcon: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#F1F3F4',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  documentName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#202124',
-    padding: 12,
-  },
-  documentInfo: {
-    fontSize: 12,
-    color: '#5F6368',
-    paddingHorizontal: 12,
-    paddingBottom: 12,
-  },
-  gridActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E8EAED',
-    paddingTop: 8,
   },
   listItem: {
     flexDirection: 'row',
@@ -445,9 +316,5 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     backgroundColor: '#F1F3F4',
     borderRadius: 4,
-  },
-  actionButtonText: {
-    fontSize: 12,
-    color: '#1A73E8',
   },
 });

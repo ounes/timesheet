@@ -36,7 +36,7 @@ const INITIAL_SITES = [
     image:
       'https://images.unsplash.com/photo-1488972685288-c3fd157d7c7a?auto=format&fit=crop&q=80&w=800&h=400',
     notes: 'Prendre la A46',
-    agencie: 'societe1',
+    agency: 'societe1',
   },
 ];
 
@@ -255,8 +255,8 @@ function SiteForm({
 }
 
 export default function SitesScreen() {
-  const agencie = useAuthStore((state) => state.agencie);
-  const workers = INITIAL_SITES.filter((site) => site.agencie == agencie);
+  const agency = useAuthStore((state) => state.agency);
+  const workers = INITIAL_SITES.filter((site) => site.agency == agency);
   const [sites, setSites] = useState(INITIAL_SITES);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingSite, setEditingSite] = useState<any>(null);

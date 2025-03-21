@@ -15,7 +15,6 @@ import {
   CircleAlert as AlertCircle,
   Calendar,
   Pencil,
-  Trash,
   Save,
   X,
   ChevronDown,
@@ -23,9 +22,12 @@ import {
   ChevronRight,
   Building2,
   Info,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react-native';
 import { useState, useMemo } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useAuthStore } from '@/store/auth';
 
 const MOCK_SITES = [
   {
@@ -33,18 +35,21 @@ const MOCK_SITES = [
     name: 'Chantier Paris Centre',
     type: 'Chantier',
     address: '123 Rue de Rivoli, 75001 Paris',
+    agencyId: 'societe1'
   },
   {
     id: '2',
     name: 'Bureau Lyon',
     type: 'Bureau',
     address: '45 Avenue Jean Jaurès, 69007 Lyon',
+    agencyId: 'societe1'
   },
   {
     id: '3',
     name: 'Site Marseille Port',
     type: 'Site Industriel',
     address: '88 Quai du Port, 13002 Marseille',
+    agencyId: 'societe1'
   },
 ];
 
@@ -155,6 +160,9 @@ function TimesheetForm({
   onCancel: () => void;
   initialData?: (typeof MOCK_TIMESHEETS)[0];
 }) {
+  const agencyId = useAuthStore((state) => state.agencyId);
+  const filteredSites = MOCK_SITES.filter((site) => agencyId === site.agencyId);
+  
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSiteSelector, setShowSiteSelector] = useState(false);
   const [showTrajetSelector, setShowTrajetSelector] = useState(false);
@@ -172,7 +180,7 @@ function TimesheetForm({
     workerId: initialData?.workerId,
   });
 
-  const selectedSite = MOCK_SITES.find((site) => site.id === formData.siteId);
+  const selectedSite = filteredSites.find((site) => site.id === formData.siteId);
   const selectedTrajet = MOCK_TRAJETS.find(
     (trajet) => trajet.id === formData.trajetId
   );
@@ -245,6 +253,7 @@ function TimesheetForm({
         />
       )}
 
+      {/* Inline Site selector */}
       <View style={styles.formRow}>
         <View style={styles.formLabelContainer}>
           <Text style={styles.formLabel}>Site de Travail</Text>
@@ -260,7 +269,7 @@ function TimesheetForm({
             styles.siteSelector,
             !formData.siteId && styles.siteSelectorEmpty,
           ]}
-          onPress={() => setShowSiteSelector(true)}
+          onPress={() => setShowSiteSelector(!showSiteSelector)}
         >
           {selectedSite ? (
             <View style={styles.selectedSiteContent}>
@@ -279,21 +288,9 @@ function TimesheetForm({
           )}
           <ChevronDown size={20} color="#666666" />
         </Pressable>
-      </View>
-
-      {/* Modal for Site selection */}
-      <Modal
-        visible={showSiteSelector}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSiteSelector(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowSiteSelector(false)}
-        >
-          <View style={styles.modalContent}>
-            {MOCK_SITES.map((site) => (
+        {showSiteSelector && (
+          <ScrollView style={styles.selectorList} nestedScrollEnabled>
+            {filteredSites.map((site) => (
               <Pressable
                 key={site.id}
                 style={[
@@ -324,9 +321,9 @@ function TimesheetForm({
                 </View>
               </Pressable>
             ))}
-          </View>
-        </Pressable>
-      </Modal>
+          </ScrollView>
+        )}
+      </View>
 
       <View style={styles.formRow}>
         <Text style={styles.formLabel}>Heures</Text>
@@ -367,7 +364,7 @@ function TimesheetForm({
         />
       </View>
 
-      {/* Trajet Selector */}
+      {/* Inline Trajet selector */}
       <View style={styles.formRow}>
         <Text style={styles.formLabel}>Trajet</Text>
         <Pressable
@@ -375,30 +372,36 @@ function TimesheetForm({
             styles.siteSelector,
             !formData.trajetId && styles.siteSelectorEmpty,
           ]}
-          onPress={() => setShowTrajetSelector(true)}
+          onPress={() => setShowTrajetSelector(!showTrajetSelector)}
         >
           {selectedTrajet ? (
-            <Text style={styles.siteSelectorText}>{selectedTrajet.label}</Text>
+            <View style={styles.selectorContent}>
+              <Text style={styles.siteSelectorText}>
+                {selectedTrajet.label}
+              </Text>
+              
+            </View>
           ) : (
             <Text style={styles.siteSelectorPlaceholder}>
               Sélectionner un trajet (optionnel)
             </Text>
           )}
-          <ChevronDown size={20} color="#666666" />
+          {selectedTrajet ? (
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                setFormData((prev) => ({ ...prev, trajetId: '' }));
+              }}
+              style={styles.clearButton}
+            >
+              <X size={16} color="#666666" />
+            </Pressable>
+          ) : (
+            <ChevronDown size={20} color="#666666" />
+          )}
         </Pressable>
-      </View>
-
-      <Modal
-        visible={showTrajetSelector}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowTrajetSelector(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowTrajetSelector(false)}
-        >
-          <View style={styles.modalContent}>
+        {showTrajetSelector && (
+          <ScrollView style={styles.selectorList} nestedScrollEnabled>
             {MOCK_TRAJETS.map((trajet) => (
               <Pressable
                 key={trajet.id}
@@ -417,19 +420,18 @@ function TimesheetForm({
                 <Text
                   style={[
                     styles.siteOptionText,
-                    trajet.id === formData.trajetId &&
-                      styles.siteOptionSelected,
+                    trajet.id === formData.trajetId && styles.siteOptionSelected,
                   ]}
                 >
                   {trajet.label}
                 </Text>
               </Pressable>
             ))}
-          </View>
-        </Pressable>
-      </Modal>
+          </ScrollView>
+        )}
+      </View>
 
-      {/* Transport Selector */}
+      {/* Inline Transport selector */}
       <View style={styles.formRow}>
         <Text style={styles.formLabel}>Transport</Text>
         <Pressable
@@ -437,32 +439,36 @@ function TimesheetForm({
             styles.siteSelector,
             !formData.transportId && styles.siteSelectorEmpty,
           ]}
-          onPress={() => setShowTransportSelector(true)}
+          onPress={() => setShowTransportSelector(!showTransportSelector)}
         >
           {selectedTransport ? (
-            <Text style={styles.siteSelectorText}>
-              {selectedTransport.label}
-            </Text>
+            <View style={styles.selectorContent}>
+              <Text style={styles.siteSelectorText}>
+                {selectedTransport.label}
+              </Text>
+              
+            </View>
           ) : (
             <Text style={styles.siteSelectorPlaceholder}>
               Sélectionner un transport (optionnel)
             </Text>
           )}
-          <ChevronDown size={20} color="#666666" />
+          {selectedTransport ? (
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                setFormData((prev) => ({ ...prev, transportId: '' }));
+              }}
+              style={styles.clearButton}
+            >
+              <X size={16} color="#666666" />
+            </Pressable>
+          ) : (
+            <ChevronDown size={20} color="#666666" />
+          )}
         </Pressable>
-      </View>
-
-      <Modal
-        visible={showTransportSelector}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowTransportSelector(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowTransportSelector(false)}
-        >
-          <View style={styles.modalContent}>
+        {showTransportSelector && (
+          <ScrollView style={styles.selectorList} nestedScrollEnabled>
             {MOCK_TRANSPORTS.map((transport) => (
               <Pressable
                 key={transport.id}
@@ -490,9 +496,9 @@ function TimesheetForm({
                 </Text>
               </Pressable>
             ))}
-          </View>
-        </Pressable>
-      </Modal>
+          </ScrollView>
+        )}
+      </View>
 
       <View style={styles.formRow}>
         <Text style={styles.formLabel}>Notes</Text>
@@ -541,6 +547,12 @@ function TimesheetItem({
   onEdit,
   onRemove,
   onRequestStatusChange,
+  onStartDecline,
+  isDeclining,
+  declineNote,
+  setDeclineNote,
+  confirmDecline,
+  cancelDecline,
 }: {
   item: (typeof MOCK_TIMESHEETS)[0];
   onEdit: (timesheet: (typeof MOCK_TIMESHEETS)[0]) => void;
@@ -549,6 +561,12 @@ function TimesheetItem({
     timesheet: (typeof MOCK_TIMESHEETS)[0],
     newStatus: string
   ) => void;
+  onStartDecline: (timesheet: (typeof MOCK_TIMESHEETS)[0]) => void;
+  isDeclining: boolean;
+  declineNote: string;
+  setDeclineNote: (note: string) => void;
+  confirmDecline: () => void;
+  cancelDecline: () => void;
 }) {
   const site = MOCK_SITES.find((s) => s.id === item.siteId);
 
@@ -570,6 +588,30 @@ function TimesheetItem({
             </View>
           </View>
           <Text style={styles.timesheetSite}>{site?.name}</Text>
+          <View style={styles.infoItem}>
+            {item.transportId ? (
+              <CheckCircle size={16} color="green" />
+            ) : (
+              <XCircle size={16} color="red" />
+            )}
+            <Text style={styles.infoText}>Transport {item.transportId}</Text>
+          </View>
+          <View style={styles.infoItem}>
+            {item.trajetId ? (
+              <CheckCircle size={16} color="green" />
+            ) : (
+              <XCircle size={16} color="red" />
+            )}
+            <Text style={styles.infoText}>Trajet {item.trajetId}</Text>
+          </View>
+          <View style={styles.infoItem}>
+            {item.panier ? (
+              <CheckCircle size={16} color="green" />
+            ) : (
+              <XCircle size={16} color="red" />
+            )}
+            <Text style={styles.infoText}>Panier repas</Text>
+          </View>
           {item.notes ? (
             <Text style={styles.timesheetNotes}>{item.notes}</Text>
           ) : null}
@@ -607,6 +649,11 @@ function TimesheetItem({
           <Text style={styles.timesheetHours}>
             {item.hours + item.hoursSup}h
           </Text>
+          {item.hoursSup ? (
+            <Text style={styles.kpiSubtitle}>
+              dont {item.hoursSup}h de nuit
+            </Text>
+          ) : null}
           <View style={styles.actionButtons}>
             <Pressable
               style={[styles.statusButton, { backgroundColor: '#2E7D32' }]}
@@ -621,22 +668,44 @@ function TimesheetItem({
                 {item.status === 'Validé' ? 'Dévalider' : 'Valider'}
               </Text>
             </Pressable>
-            <Pressable
-              style={[styles.statusButton, { backgroundColor: '#C62828' }]}
-              onPress={() =>
-                onRequestStatusChange(
-                  item,
-                  item.status === 'Refusé' ? 'En attente' : 'Refusé'
-                )
-              }
-            >
-              <Text style={styles.statusButtonText}>
-                {item.status === 'Refusé' ? 'Annuler refus' : 'Refuser'}
-              </Text>
-            </Pressable>
+            {!isDeclining && (
+              <Pressable
+                style={[styles.statusButton, { backgroundColor: '#C62828' }]}
+                onPress={() => onStartDecline(item)}
+              >
+                <Text style={styles.statusButtonText}>Refuser</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </View>
+      {isDeclining && (
+        <View style={styles.declineContainer}>
+          <TextInput
+            style={styles.declineInput}
+            value={declineNote}
+            onChangeText={setDeclineNote}
+            placeholder="Ajouter une note pour le refus..."
+            multiline
+          />
+          <View style={styles.declineActions}>
+            <Pressable
+              style={[styles.declineButton, styles.cancelDeclineButton]}
+              onPress={cancelDecline}
+            >
+              <X size={20} color="#666666" />
+              <Text style={styles.cancelButtonText}>Annuler</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.declineButton, styles.confirmDeclineButton]}
+              onPress={confirmDecline}
+            >
+              <Save size={20} color="#FFFFFF" />
+              <Text style={styles.submitButtonText}> Confirmer</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -672,12 +741,11 @@ export default function DashboardScreen() {
   const [selectedWorker, setSelectedWorker] = useState<
     (typeof MOCK_WORKERS)[0] | null
   >(null);
-  // Modal state for entering decline note.
-  const [declineModalVisible, setDeclineModalVisible] = useState(false);
-  const [declineNote, setDeclineNote] = useState('');
+  // For inline decline note – keep track of which timesheet is currently being declined.
   const [timesheetToDecline, setTimesheetToDecline] = useState<
     (typeof MOCK_TIMESHEETS)[0] | null
   >(null);
+  const [declineNote, setDeclineNote] = useState('');
 
   // Compute week boundaries
   const weekEnd = new Date(selectedWeek.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -774,46 +842,38 @@ export default function DashboardScreen() {
     setShowForm(false);
   };
 
-  // This function is triggered when user clicks on Validate or Refuse button.
-  // If the new status is "Refusé", we open a modal to let user enter a decline note.
-  const requestStatusChange = (
-    timesheet: (typeof MOCK_TIMESHEETS)[0],
-    newStatus: string
-  ) => {
-    if (newStatus === 'Refusé' && timesheet.status !== 'Refusé') {
-      setTimesheetToDecline(timesheet);
-      setDeclineNote('');
-      setDeclineModalVisible(true);
-    } else {
-      // For validation or reverting a declined timesheet.
-      setTimesheets((prev) =>
-        prev.map((ts) =>
-          ts.id === timesheet.id ? { ...ts, status: newStatus } : ts
-        )
-      );
-    }
+  // When user taps "Refuser", we start an inline decline.
+  const startDecline = (timesheet: (typeof MOCK_TIMESHEETS)[0]) => {
+    setTimesheetToDecline(timesheet);
+    setDeclineNote('');
   };
 
   const confirmDecline = () => {
     if (timesheetToDecline) {
-      // Append the decline note to the timesheet notes.
       setTimesheets((prev) =>
         prev.map((ts) =>
           ts.id === timesheetToDecline.id
             ? {
                 ...ts,
                 status: 'Refusé',
-                notes: `${ts.notes} - Note: ${declineNote}`,
+                notes: `${ts.notes}\nNotes de refus : ${declineNote}`,
               }
             : ts
         )
       );
-      setDeclineModalVisible(false);
       setTimesheetToDecline(null);
     }
   };
 
-  // If no worker is selected, show the list of workers as conversation threads.
+  const cancelDecline = () => {
+    setTimesheetToDecline(null);
+  };
+
+  // When editing a timesheet, hide it from the list.
+  const displayedTimesheets = workerWeeklyTimesheets.filter(
+    (ts) => !editingTimesheet || ts.id !== editingTimesheet.id
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
@@ -882,7 +942,7 @@ export default function DashboardScreen() {
               />
             )}
             <FlatList
-              data={workerWeeklyTimesheets.sort(
+              data={displayedTimesheets.sort(
                 (a, b) =>
                   new Date(b.date).getTime() - new Date(a.date).getTime()
               )}
@@ -896,7 +956,19 @@ export default function DashboardScreen() {
                   onRemove={(ts) => {
                     setTimesheets((prev) => prev.filter((t) => t.id !== ts.id));
                   }}
-                  onRequestStatusChange={requestStatusChange}
+                  onRequestStatusChange={(ts, newStatus) =>
+                    setTimesheets((prev) =>
+                      prev.map((t) =>
+                        t.id === ts.id ? { ...t, status: newStatus } : t
+                      )
+                    )
+                  }
+                  onStartDecline={startDecline}
+                  isDeclining={timesheetToDecline?.id === item.id}
+                  declineNote={declineNote}
+                  setDeclineNote={setDeclineNote}
+                  confirmDecline={confirmDecline}
+                  cancelDecline={cancelDecline}
                 />
               )}
               keyExtractor={(item) => item.id}
@@ -932,45 +1004,6 @@ export default function DashboardScreen() {
           </View>
         )}
       </ScrollView>
-
-      {/* Modal for entering decline note */}
-      <Modal
-        visible={declineModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setDeclineModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              Ajouter une note pour le refus
-            </Text>
-            <TextInput
-              style={styles.modalInput}
-              value={declineNote}
-              onChangeText={setDeclineNote}
-              placeholder="Saisissez votre note ici..."
-              multiline
-            />
-            <View style={styles.modalActions}>
-              <Pressable
-                style={[styles.formButton, styles.cancelButton]}
-                onPress={() => setDeclineModalVisible(false)}
-              >
-                <X size={20} color="#666666" />
-                <Text style={styles.cancelButtonText}>Annuler</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.formButton, styles.submitButton]}
-                onPress={confirmDecline}
-              >
-                <Save size={20} color="#FFFFFF" />
-                <Text style={styles.submitButtonText}>Confirmer</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -1126,20 +1159,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333333',
   },
-  workerItem: {
-    padding: 16,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'space-between',
-    borderRadius: 12,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  workerName: {
-    fontSize: 16,
-    color: '#333333',
-  },
   workerMessage: {
     fontSize: 14,
     color: '#F57C00',
@@ -1190,6 +1209,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666666',
     flex: 1,
+    marginLeft: 4
   },
   formInput: {
     backgroundColor: '#F5F5F5',
@@ -1367,6 +1387,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 6,
   },
+  selectorList: {
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    marginTop: 8,
+  },
   statusButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
@@ -1405,6 +1432,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 12,
+  },
+  declineContainer: {
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    paddingTop: 8,
+  },
+  declineInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 8,
+    fontSize: 14,
+    backgroundColor: '#F9F9F9',
+  },
+  declineActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+  },
+  declineButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  cancelDeclineButton: {
+    backgroundColor: '#E0E0E0',
+  },
+  confirmDeclineButton: {
+    backgroundColor: '#007AFF',
+  },
+  infoRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 4 },
+  infoItem: { flexDirection: 'row', alignItems: 'center', marginRight: 12 },
+  clearButton: { marginLeft: 8 },
+  selectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
 
