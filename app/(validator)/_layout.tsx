@@ -1,8 +1,7 @@
 import { Tabs } from 'expo-router';
 import {
   LayoutDashboard,
-  User,
-  MessageSquare,
+  Users,
   Settings,
 } from 'lucide-react-native';
 
@@ -32,16 +31,7 @@ export default function TabLayout() {
         name="users"
         options={{
           title: 'Salariés',
-          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="messages"
-        options={{
-          title: 'Messagerie',
-          tabBarIcon: ({ color, size }) => (
-            <MessageSquare size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
         }}
       />
       <Tabs.Screen

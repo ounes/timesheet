@@ -13,7 +13,7 @@ import {
   Trash,
 } from 'lucide-react-native';
 import { StyleSheet } from 'react-native';
-import { Site, TimesheetFormData } from '../../types';
+import { Site, TimesheetFormData } from '../ui/types';
 
 export function TimesheetItem({
   item,
@@ -32,16 +32,16 @@ export function TimesheetItem({
   sites: Site[];
   onEdit: (timesheet: TimesheetFormData) => void;
   onRemove: (timesheet: TimesheetFormData) => void;
-  onRequestStatusChange: (
+  onRequestStatusChange?: (
     timesheet: TimesheetFormData,
     newStatus: string
   ) => void;
-  onStartDecline: (timesheet: TimesheetFormData) => void;
-  isDeclining: boolean;
-  declineNote: string;
-  setDeclineNote: (note: string) => void;
-  confirmDecline: () => void;
-  cancelDecline: () => void;
+  onStartDecline?: (timesheet: TimesheetFormData) => void;
+  isDeclining?: boolean;
+  declineNote?: string;
+  setDeclineNote?: (note: string) => void;
+  confirmDecline?: () => void;
+  cancelDecline?: () => void;
 }) {
   const site = sites.find((s) => s.id === item.siteId);
 
@@ -135,7 +135,7 @@ export function TimesheetItem({
               dont {item.hoursSup}h de nuit
             </Text>
           ) : null}
-          {!isDeclining && (
+          {!isDeclining && onStartDecline && onRequestStatusChange && (
             <View style={styles.actionButtons}>
               <Pressable
                 style={[styles.statusButton, { backgroundColor: '#2E7D32' }]}

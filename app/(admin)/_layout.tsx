@@ -1,86 +1,81 @@
-import { Tabs } from 'expo-router';
+import { Drawer } from 'expo-router/drawer';
 import {
   LayoutDashboard,
   MapPin,
   Users,
-  MessageSquare,
   Settings,
   FolderOpen,
   FileSpreadsheet,
 } from 'lucide-react-native';
 
-export default function TabLayout() {
+export default function DrawerLayout() {
   return (
-    <Tabs
+    <Drawer
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          height: 60,
+        drawerType: "permanent",
+        drawerPosition: "left",
+        drawerActiveTintColor: '#000',
+        drawerInactiveTintColor: '#666',
+        drawerStyle: {
+          width: 300,
         },
-        tabBarActiveTintColor: '#1A73E8',
-        tabBarInactiveTintColor: '#666666',
       }}
     >
-      <Tabs.Screen
+      <Drawer.Screen
         name="index"
         options={{
-          title: 'Acceuil',
-          tabBarIcon: ({ color, size }) => (
+          title: 'Accueil',
+          drawerIcon: ({ color, size }) => (
             <LayoutDashboard size={size} color={color} />
           ),
         }}
       />
-      <Tabs.Screen
+      <Drawer.Screen
         name="users"
         options={{
           title: 'Utilisateurs',
-          tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
+          drawerIcon: ({ color, size }) => (
+            <Users size={size} color={color} />
+          ),
         }}
       />
-      <Tabs.Screen
+      <Drawer.Screen
         name="sites"
         options={{
           title: 'Sites',
-          tabBarIcon: ({ color, size }) => <MapPin size={size} color={color} />,
+          drawerIcon: ({ color, size }) => (
+            <MapPin size={size} color={color} />
+          ),
         }}
       />
-      <Tabs.Screen
+      <Drawer.Screen
         name="timesheets"
         options={{
           title: 'Relevés',
-          tabBarIcon: ({ color, size }) => (
+          drawerIcon: ({ color, size }) => (
             <FileSpreadsheet size={size} color={color} />
           ),
         }}
       />
-      <Tabs.Screen
-        name="messages"
-        options={{
-          title: 'Messagerie',
-          tabBarIcon: ({ color, size }) => (
-            <MessageSquare size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
+      <Drawer.Screen
         name="docbox"
         options={{
           title: 'Documents',
-          tabBarIcon: ({ color, size }) => (
+          drawerIcon: ({ color, size }) => (
             <FolderOpen size={size} color={color} />
           ),
         }}
       />
-      <Tabs.Screen
+      <Drawer.Screen
         name="settings"
         options={{
           title: 'Paramètres',
-          tabBarIcon: ({ color, size }) => (
+          drawerIcon: ({ color, size }) => (
             <Settings size={size} color={color} />
           ),
         }}
       />
-    </Tabs>
+    </Drawer>
   );
 }

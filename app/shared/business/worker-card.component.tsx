@@ -1,23 +1,12 @@
-import { View, Text, StyleSheet, Image } from 'react-native';
-import { MapPin, Calendar, Phone, Users, Info, Mail } from 'lucide-react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { MapPin, Calendar, Phone, Info, Mail } from 'lucide-react-native';
 import { Worker } from '../../../shared/types';
 
 export function WorkerCard({ worker }: { worker: Worker }) {
   return (
     <View style={styles.workerCard}>
-      <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: worker.image }}
-          style={styles.workerImage}
-          resizeMode="cover"
-        />
-      </View>
       <View style={styles.workerContent}>
         <Text style={styles.workerName}>{worker.name}</Text>
-        <View style={styles.workerInfo}>
-          <Users size={16} color="#666666" />
-          <Text style={styles.workerDetail}>{worker.role}</Text>
-        </View>
         <View style={styles.workerInfo}>
           <Info size={16} color="#666666" />
           <Text style={styles.workerDetail}>{worker.position}</Text>

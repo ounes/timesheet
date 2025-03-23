@@ -1,8 +1,8 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MOCK_WORKERS } from '@/store/mock_data';
-import { Worker } from '../shared/types';
-import { WorkerCard } from '../shared/business/worker-card/worker-card.component';
+import { Worker } from '../shared/ui/types';
+import { WorkerCard } from '../shared/business/worker-card.component';
 
 export default function WorkersScreen() {
   const workers = MOCK_WORKERS as Worker[];

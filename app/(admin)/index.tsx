@@ -8,114 +8,20 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  Clock,
-  CircleAlert as AlertCircle,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  User,
-  Info,
+  FileSpreadsheet,
+  MapPin,
+  Users,
 } from 'lucide-react-native';
-import { useAuthStore } from '@/store/auth';
 import { useState, useMemo } from 'react';
-
-// MOCK DATA
-const MOCK_WORKERS = [
-  { id: 'w1', name: 'Alice Dupont', agency: 'societe1' },
-  { id: 'w2', name: 'Bob Martin', agency: 'societe1' },
-  { id: 'w3', name: 'Charlie Durand', agency: 'societe2' },
-];
-
-const MOCK_TIMESHEETS = [
-  {
-    id: '1',
-    date: '2025-03-19',
-    siteId: '1',
-    hours: 8,
-    hoursSup: 1,
-    notes: 'Installation des équipements électriques',
-    status: 'Validé',
-    idWorker: 'w1',
-  },
-  {
-    id: '2',
-    date: '2025-03-18',
-    siteId: '2',
-    hours: 7.5,
-    hoursSup: 0,
-    notes: 'Réunion de coordination',
-    status: 'En attente',
-    idWorker: 'w1',
-  },
-  {
-    id: '3',
-    date: '2025-03-17',
-    siteId: '3',
-    hours: 8.5,
-    hoursSup: 2,
-    notes: 'Maintenance préventive',
-    status: 'Validé',
-    idWorker: 'w2',
-  },
-  {
-    id: '4',
-    date: '2025-03-10',
-    siteId: '1',
-    hours: 9,
-    hoursSup: 0,
-    notes: 'Inspection',
-    status: 'En attente',
-    idWorker: 'w3',
-  },
-];
-
-function KPICard({
-  icon,
-  title,
-  value,
-  subtitle,
-  accentColor = '#007AFF',
-}: {
-  icon: React.ReactNode;
-  title: string;
-  value: string;
-  subtitle?: string;
-  accentColor?: string;
-}) {
-  return (
-    <View style={[styles.kpiCard, { borderLeftColor: accentColor }]}>
-      <View style={styles.kpiIconContainer}>{icon}</View>
-      <View style={styles.kpiContent}>
-        <Text style={styles.kpiTitle}>{title}</Text>
-        <Text style={styles.kpiValue}>{value}</Text>
-        {subtitle && <Text style={styles.kpiSubtitle}>{subtitle}</Text>}
-      </View>
-    </View>
-  );
-}
-
-// Helper functions for date filtering
-function getStartOfWeek(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - (day === 0 ? 6 : day - 1);
-  return new Date(d.setDate(diff));
-}
-
-function getStartOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function getEndOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
-}
+import { MOCK_SITES, MOCK_TIMESHEETS, MOCK_WORKERS } from '@/store/mock_data';
+import { getEndOfMonth, getStartOfMonth, getStartOfWeek } from '../shared/utils';
+import { KPICard } from '../shared/business/kpi-card.componenet';
+import theme from '../shared/ui/theme';
 
 export default function AdminDashboardScreen() {
-  const agency = useAuthStore((state) => state.agencyId);
-  const workers = MOCK_WORKERS.filter((wk) => wk.agency === agency);
-  const timesheets = MOCK_TIMESHEETS.filter((ts) =>
-    workers.some((worker) => worker.id === ts.idWorker)
-  );
+  const workers = MOCK_WORKERS;
+  const sites = MOCK_SITES;
+  const timesheets = MOCK_TIMESHEETS;
 
   // Filter option: "All", "Week", or "Month"
   const [dateFilter, setDateFilter] = useState<'All' | 'Week' | 'Month'>(
@@ -150,10 +56,11 @@ export default function AdminDashboardScreen() {
       filtered = filtered.filter((ts) => ts.status === statusFilter);
     }
     return filtered;
-  }, [dateFilter, statusFilter, timesheets]);
+  }, [dateFilter, timesheets]);
 
   // KPI computations
   const totalWorkers = workers.length;
+  const totalSites = sites.length;
   const totalTimesheets = filteredTimesheets.length;
   const pendingTimesheets = filteredTimesheets.filter(
     (ts) => ts.status === 'En attente'
@@ -204,13 +111,19 @@ export default function AdminDashboardScreen() {
         {/* KPI Section */}
         <View style={styles.kpiContainer}>
           <KPICard
-            icon={<User size={24} color="#007AFF" />}
-            title="Nombre de salariés"
+            icon={<Users size={24} color="#007AFF" />}
+            title="Nombre d'utilisateurs"
             value={totalWorkers.toString()}
             accentColor="#007AFF"
           />
           <KPICard
-            icon={<Calendar size={24} color="#007AFF" />}
+            icon={<MapPin size={24} color="#007AFF" />}
+            title="Nombre de sites"
+            value={totalSites.toString()}
+            accentColor="#0d7527"
+          />
+          <KPICard
+            icon={<FileSpreadsheet size={24} color="#007AFF" />}
             title="Nombre de relevés"
             value={totalTimesheets.toString()}
             subtitle={`En attente: ${pendingTimesheets} | Validé: ${validatedTimesheets} | Refusé: ${declinedTimesheets}`}
@@ -251,7 +164,7 @@ export default function AdminDashboardScreen() {
               (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
             )}
             renderItem={({ item }) => {
-              const worker = workers.find((wk) => wk.id === item.idWorker);
+              const worker = workers.find((wk) => wk.id === item.workerId);
               return (
                 <View style={styles.timesheetItem}>
                   {/* Header with worker name, date and hours */}
@@ -332,8 +245,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   kpiContainer: {
-    paddingHorizontal: 20,
-    gap: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: theme.spacing.large,
+    marginBottom: theme.spacing.medium,
   },
   kpiCard: {
     backgroundColor: '#FFFFFF',

@@ -7,66 +7,90 @@ import {
   FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CircleAlert as AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import {
+  CircleAlert as AlertCircle,
+  ChevronRight,
+} from 'lucide-react-native';
 import { useState, useMemo } from 'react';
-import { formatWeekLabel, getStartOfWeek } from '../shared/utils';
-import { KPICard } from '../shared/business/kpi-card/kpi-card.componenet';
-import { TimesheetForm } from '../shared/business/timesheet-form/timesheet-form.component';
-import { TimesheetItem } from '../shared/business/timesheet-item/timesheet-item.component';
-import { StateActionWorker, TimesheetFormData } from '../shared/types';
-import { MOCK_SITES, MOCK_TIMESHEETS, MOCK_TRAJETS, MOCK_TRANSPORTS, MOCK_WORKERS } from '../../store/mock_data';
+import {
+  getEndOfMonth,
+  getStartOfMonth,
+  getStartOfWeek,
+} from '../shared/utils';
+import { KPICard } from '../shared/business/kpi-card.componenet';
+import { TimesheetForm } from '../shared/business/timesheet-form.component';
+import { TimesheetItem } from '../shared/business/timesheet-item.component';
+import { StateActionWorker, TimesheetFormData } from '../shared/ui/types';
+import {
+  MOCK_SITES,
+  MOCK_TIMESHEETS,
+  MOCK_TRAJETS,
+  MOCK_TRANSPORTS,
+  MOCK_WORKERS,
+} from '../../store/mock_data';
+import CustomCalendar from '../shared/business/calendar.component';
 
 export default function DashboardScreen() {
   const [showForm, setShowForm] = useState(false);
-  const [editingTimesheet, setEditingTimesheet] = useState<TimesheetFormData | null>(null);
+  const [editingTimesheet, setEditingTimesheet] = useState<TimesheetFormData>();
   const [timesheets, setTimesheets] = useState(MOCK_TIMESHEETS);
-  const [selectedWeek, setSelectedWeek] = useState(getStartOfWeek(new Date()));
-  const [selectedWorker, setSelectedWorker] = useState<StateActionWorker | null>(null);
-  const [timesheetToDecline, setTimesheetToDecline] = useState<TimesheetFormData | null>(null);
+  const [selectedWorker, setSelectedWorker] = useState<StateActionWorker>();
+  const [timesheetToDecline, setTimesheetToDecline] =
+    useState<TimesheetFormData>();
   const [declineNote, setDeclineNote] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
 
-  const weekEnd = new Date(selectedWeek.getTime() + 7 * 24 * 60 * 60 * 1000);
+  // Determine period boundaries based on the view mode.
+  const selectedStart = useMemo(
+    () =>
+      viewMode === 'week'
+        ? getStartOfWeek(selectedDate)
+        : getStartOfMonth(selectedDate),
+    [viewMode, selectedDate]
+  );
 
-  const globalPendingCount = useMemo(() => {
-    return timesheets.filter((ts) => ts.status === 'En attente').length;
-  }, [timesheets]);
+  const selectedEnd = useMemo(
+    () =>
+      viewMode === 'week'
+        ? new Date(selectedStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+        : getEndOfMonth(selectedStart),
+    [viewMode, selectedStart]
+  );
 
-  const weeklyTimesheets = useMemo(() => {
-    return timesheets.filter((ts) => {
-      const tsDate = new Date(ts.date);
-      return tsDate >= selectedWeek && tsDate < weekEnd;
-    });
-  }, [timesheets, selectedWeek, weekEnd]);
+  // Use the same periodTimesheets for both worker list and details.
+  const periodTimesheets = useMemo(
+    () =>
+      timesheets.filter((ts) => {
+        const tsDate = new Date(ts.date);
+        return tsDate >= selectedStart && tsDate < selectedEnd;
+      }),
+    [timesheets, selectedStart, selectedEnd]
+  );
 
-  const workerWeeklyTimesheets = useMemo(() => {
+  // When a worker is selected, show only his timesheets for the current period.
+  const workerPeriodTimesheets = useMemo(() => {
     if (!selectedWorker) return [];
-    return weeklyTimesheets.filter((ts) => ts.workerId === selectedWorker.id);
-  }, [weeklyTimesheets, selectedWorker]);
+    return periodTimesheets.filter((ts) => ts.workerId === selectedWorker.id);
+  }, [periodTimesheets, selectedWorker]);
 
+  const pendingCount = useMemo(() => {
+    return periodTimesheets.filter((ts) => ts.status === 'En attente').length;
+  }, [periodTimesheets]);
+
+  // Update pending counts per worker based on the current period.
   const workersWithPending = useMemo(() => {
     return MOCK_WORKERS.map((worker) => {
-      const count = weeklyTimesheets.filter(
+      const count = periodTimesheets.filter(
         (ts) => ts.workerId === worker.id && ts.status === 'En attente'
       ).length;
       return { ...worker, pending: count };
     });
-  }, [weeklyTimesheets]);
+  }, [periodTimesheets]);
 
-  const displayedTimesheets = workerWeeklyTimesheets.filter(
+  const displayedTimesheets = workerPeriodTimesheets.filter(
     (ts) => !editingTimesheet || ts.id !== editingTimesheet.id
   );
-
-  const handlePreviousWeek = () => {
-    setSelectedWeek(new Date(selectedWeek.getTime() - 7 * 24 * 60 * 60 * 1000));
-  };
-
-  const handleNextWeek = () => {
-    setSelectedWeek(new Date(selectedWeek.getTime() + 7 * 24 * 60 * 60 * 1000));
-  };
-
-  const handleThisWeek = () => {
-    setSelectedWeek(getStartOfWeek(new Date()));
-  };
 
   const handleSubmit = (data: TimesheetFormData) => {
     if (editingTimesheet) {
@@ -75,7 +99,10 @@ export default function DashboardScreen() {
           ts.id === editingTimesheet.id
             ? {
                 ...ts,
-                date: data.date instanceof Date ? data.date.toISOString().split('T')[0] : data.date,
+                date:
+                  data.date instanceof Date
+                    ? data.date.toISOString().split('T')[0]
+                    : data.date,
                 siteId: data.siteId,
                 hours: data.hours || 0,
                 hoursSup: data.hoursSup || 0,
@@ -88,13 +115,16 @@ export default function DashboardScreen() {
             : ts
         )
       );
-      setEditingTimesheet(null);
+      setEditingTimesheet(undefined);
     } else {
       setTimesheets((prev) => [
         {
           id: Date.now().toString(),
           workerId: selectedWorker?.id || 'w1',
-          date: data.date instanceof Date ? data.date.toISOString().split('T')[0] : data.date,
+          date:
+            data.date instanceof Date
+              ? data.date.toISOString().split('T')[0]
+              : data.date,
           siteId: data.siteId,
           hours: data.hours || 0,
           hoursSup: data.hoursSup || 0,
@@ -128,12 +158,12 @@ export default function DashboardScreen() {
             : ts
         )
       );
-      setTimesheetToDecline(null);
+      setTimesheetToDecline(undefined);
     }
   };
 
   const cancelDecline = () => {
-    setTimesheetToDecline(null);
+    setTimesheetToDecline(undefined);
   };
 
   return (
@@ -150,27 +180,19 @@ export default function DashboardScreen() {
 
         {selectedWorker && (
           <View style={styles.sectionHeader}>
-            <Pressable onPress={() => setSelectedWorker(null)}>
+            <Pressable onPress={() => setSelectedWorker(undefined)}>
               <Text style={styles.backButton}>Retour</Text>
             </Pressable>
           </View>
         )}
 
         {!selectedWorker && (
-          <View style={styles.weekNavigation}>
-            <Pressable onPress={handlePreviousWeek} style={styles.weekNavButton}>
-              <ChevronLeft size={24} color="#007AFF" />
-            </Pressable>
-            <Text style={styles.weekLabel}>
-              {formatWeekLabel(selectedWeek)}
-            </Text>
-            <Pressable onPress={handleNextWeek} style={styles.weekNavButton}>
-              <ChevronRight size={24} color="#007AFF" />
-            </Pressable>
-            <Pressable onPress={handleThisWeek} style={styles.thisWeekButton}>
-              <Text style={styles.thisWeekText}>Cette semaine</Text>
-            </Pressable>
-          </View>
+          <CustomCalendar
+            initialDate={selectedDate}
+            initialViewMode="week"
+            onDateChange={(date) => setSelectedDate(date)}
+            onViewModeChange={(mode) => setViewMode(mode)}
+          />
         )}
 
         {!selectedWorker && (
@@ -178,7 +200,7 @@ export default function DashboardScreen() {
             <KPICard
               icon={<AlertCircle size={24} color="#F57C00" />}
               title="En attente de validation"
-              value={globalPendingCount.toString()}
+              value={pendingCount.toString()}
               subtitle="Relevé d'heure"
               accentColor="#F57C00"
             />
@@ -192,7 +214,7 @@ export default function DashboardScreen() {
                 onSubmit={handleSubmit}
                 onCancel={() => {
                   setShowForm(false);
-                  setEditingTimesheet(null);
+                  setEditingTimesheet(undefined);
                 }}
                 initialData={editingTimesheet}
                 sites={MOCK_SITES}
@@ -202,7 +224,8 @@ export default function DashboardScreen() {
             )}
             <FlatList
               data={displayedTimesheets.sort(
-                (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+                (a, b) =>
+                  new Date(b.date).getTime() - new Date(a.date).getTime()
               )}
               renderItem={({ item }) => (
                 <TimesheetItem
@@ -239,7 +262,10 @@ export default function DashboardScreen() {
             <FlatList
               data={workersWithPending}
               renderItem={({ item }) => (
-                <Pressable style={styles.workerItem} onPress={() => setSelectedWorker(item)}>
+                <Pressable
+                  style={styles.workerItem}
+                  onPress={() => setSelectedWorker(item)}
+                >
                   <View style={styles.workerItemContent}>
                     <Text style={styles.workerName}>{item.name}</Text>
                   </View>

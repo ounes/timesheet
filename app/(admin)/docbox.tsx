@@ -5,149 +5,22 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  Platform,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuthStore } from '@/store/auth';
-import { ArrowLeft, Download, File, Upload } from 'lucide-react-native';
-
-// MOCKED DATA (using only idWorker for document-worker relation)
-const MOCK_WORKERS = [
-  { id: 'w1', name: 'Jean Dupont', position: 'Ouvrier', agency: 'societe1' },
-  {
-    id: 'w2',
-    name: 'Marie Curie',
-    position: 'Chef de chantier',
-    agency: 'societe1',
-  },
-  {
-    id: 'w3',
-    name: 'Pierre Martin',
-    position: 'Électricien',
-    agency: 'societe2',
-  },
-];
-
-const MOCK_DOCUMENTS = [
-  {
-    id: '1',
-    name: 'Contrat de travail.pdf',
-    type: 'pdf',
-    size: '2.7 MB',
-    modified: '2024-02-20T09:00:00',
-    idWorker: 'w1',
-  },
-  {
-    id: '2',
-    name: 'Certificat formation.docx',
-    type: 'docx',
-    size: '1.2 MB',
-    modified: '2024-01-15T14:30:00',
-    idWorker: 'w2',
-  },
-  {
-    id: '3',
-    name: 'Attestation employeur.pdf',
-    type: 'pdf',
-    size: '2.4 MB',
-    modified: '2024-02-19T10:30:00',
-    idWorker: 'w3',
-  },
-];
-
-function groupDocumentsByYear(documents: typeof MOCK_DOCUMENTS) {
-  const sorted = [...documents].sort(
-    (a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime()
-  );
-  const groups: { [year: string]: typeof MOCK_DOCUMENTS } = {};
-  sorted.forEach((doc) => {
-    const year = new Date(doc.modified).getFullYear().toString();
-    if (!groups[year]) groups[year] = [];
-    groups[year].push(doc);
-  });
-  return groups;
-}
-
-interface DocumentGridProps {
-  documents: typeof MOCK_DOCUMENTS;
-  selectedWorker: string;
-  onBack: () => void;
-}
-
-function DocumentGrid({
-  documents,
-  selectedWorker,
-  onBack,
-}: DocumentGridProps) {
-  const groups = groupDocumentsByYear(documents);
-  const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
-
-  const renderListItem = (document: (typeof MOCK_DOCUMENTS)[0]) => (
-    <Pressable
-      key={document.id}
-      style={[
-        styles.listItem,
-        selectedDocument === document.id && styles.listItemSelected,
-      ]}
-      onPress={() => setSelectedDocument(document.id)}
-    >
-      <View style={styles.listItemIcon}>
-        <File size={24} color="#1A73E8" />
-      </View>
-      <View style={styles.listItemContent}>
-        <Text style={styles.listItemName}>{document.name}</Text>
-        <Text style={styles.listItemInfo}>
-          {document.size} • Modifié le{' '}
-          {new Date(document.modified).toLocaleDateString()}
-        </Text>
-      </View>
-      {selectedDocument === document.id && (
-        <View style={styles.listActions}>
-          <Pressable style={styles.actionButton}>
-            <Download size={20} color="#1A73E8" />
-          </Pressable>
-        </View>
-      )}
-    </Pressable>
-  );
-
-  return (
-    <ScrollView style={styles.documentsWrapper}>
-      <View style={styles.gridHeader}>
-        <Pressable onPress={onBack} style={styles.backButton}>
-          <ArrowLeft size={20} color="#1A73E8" />
-        </Pressable>
-        <Text style={styles.gridTitle}>Documents de {selectedWorker}</Text>
-      </View>
-
-      {Object.keys(groups)
-        .sort((a, b) => Number(b) - Number(a))
-        .map((year) => (
-          <View key={year} style={styles.yearGroup}>
-            <Text style={styles.yearTitle}>{year}</Text>
-            <View style={styles.documentsContainerList}>
-              {groups[year].map(renderListItem)}
-            </View>
-          </View>
-        ))}
-    </ScrollView>
-  );
-}
+import { MOCK_DOCUMENTS, MOCK_WORKERS } from '@/store/mock_data';
+import { Upload } from 'lucide-react-native';
+import { DocumentGrid } from '../shared/business/document-grid.component';
 
 export default function DocBoxScreen() {
-  const agencyId = useAuthStore((state) => state.agencyId);
-  const workers = MOCK_WORKERS.filter((wk) => wk.agency === agencyId);
-  // Filter documents by matching idWorker
-  const documents = MOCK_DOCUMENTS.filter((doc) =>
-    workers.some((worker) => worker.id === doc.idWorker)
-  );
+  const workers = MOCK_WORKERS;
+  const documents = MOCK_DOCUMENTS;
   const [selectedWorker, setSelectedWorker] = useState<string | null>(null);
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= 1024;
+  // const { width } = useWindowDimensions();
+  // const isDesktop = width >= 1024;
 
   const workerDocuments = MOCK_DOCUMENTS.filter(
-    (doc) => doc.idWorker === selectedWorker
+    (doc) => doc.workerId === selectedWorker
   );
 
   return (
@@ -169,7 +42,7 @@ export default function DocBoxScreen() {
                     <Text style={styles.workerName}>{worker.name}</Text>
                     <Text style={styles.workerPosition}>{worker.position}</Text>
                     <Text style={styles.docCount}>
-                      {documents.filter((d) => d.idWorker === worker.id).length}{' '}
+                      {documents.filter((d) => d.workerId === worker.id).length}{' '}
                       documents
                     </Text>
                   </Pressable>
@@ -352,4 +225,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export { DocBoxScreen };
+export { };

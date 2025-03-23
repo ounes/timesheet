@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { List, Download, FileText, File, Upload } from 'lucide-react-native';
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth';
-import { Document } from '../shared/types';
+import { Document } from '../shared/ui/types';
 import { MOCK_DOCUMENTS } from '@/store/mock_data';
 import { groupDocumentsByYear } from '../shared/utils';
 
@@ -98,12 +98,6 @@ export default function DocBoxScreen() {
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <Text style={styles.title}>Mes documents</Text>
-            </View>
-            <View style={styles.headerRight}>
-              {/* Grid mode removed – list mode is now the default view */}
-              <Pressable style={[styles.viewModeButton, styles.viewModeButtonActive]}>
-                <List size={20} color="#1A73E8" />
-              </Pressable>
             </View>
           </View>
 

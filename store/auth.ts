@@ -2,11 +2,12 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MOCK_USERS } from './mock_data';
+import { Role } from '@/app/shared/ui/types';
 
 interface AuthState {
   isAuthenticated: boolean;
   id: string | null;
-  role: string | null;
+  role: Role | null;
   validatorId: string | null;
   agencyId: string | null;
   login: (username: string, password: string) => Promise<boolean>;
@@ -30,7 +31,7 @@ export const useAuthStore = create<AuthState>()(
           set({
             isAuthenticated: true,
             id: user.id,
-            role: user.role,
+            role: user.role as Role,
             validatorId: user.validatorId,
             agencyId: user.agencyId,
           });

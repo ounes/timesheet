@@ -19,7 +19,7 @@ import { useState } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuthStore } from '@/store/auth';
 import { StyleSheet } from 'react-native';
-import { Site, TimesheetFormData, Trajet, Transport } from '../../types';
+import { Site, TimesheetFormData, Trajet, Transport } from '../ui/types';
 
 export function TimesheetForm({
     onSubmit,
@@ -210,10 +210,10 @@ export function TimesheetForm({
                     style={styles.formInput}
                     value={formData.hours.toString()}
                     onChangeText={(value) =>
-                        setFormData((prev) => ({ ...prev, hours: parseFloat(value) }))
+                        setFormData((prev) => ({ ...prev, hours: parseFloat(value || '0') }))
                     }
                     keyboardType="numeric"
-                    placeholder="0.0"
+                    placeholder=""
                     maxLength={4}
                 />
             </View>
@@ -224,10 +224,10 @@ export function TimesheetForm({
                     style={styles.formInput}
                     value={formData.hoursSup.toString()}
                     onChangeText={(value) =>
-                        setFormData((prev) => ({ ...prev, hoursSup: parseFloat(value) }))
+                        setFormData((prev) => ({ ...prev, hoursSup: parseFloat(value || '0') }))
                     }
                     keyboardType="numeric"
-                    placeholder="0.0"
+                    placeholder=""
                     maxLength={4}
                 />
             </View>

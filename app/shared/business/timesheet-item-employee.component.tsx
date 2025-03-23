@@ -5,21 +5,20 @@ import {
   StyleSheet
 } from 'react-native';
 import { useAuthStore } from '@/store/auth';
-import { MOCK_SITES, MOCK_TIMESHEETS } from '@/store/mock_data';
+import { MOCK_SITES } from '@/store/mock_data';
 import { Pencil, Trash } from 'lucide-react-native';
+import { TimesheetFormData } from '../ui/types';
 
 export function TimesheetItem({
   item,
   onEdit,
   onRemove,
 }: {
-  item: (typeof MOCK_TIMESHEETS)[0];
-  onEdit: (timesheet: (typeof MOCK_TIMESHEETS)[0]) => void;
-  onRemove: (timesheet: (typeof MOCK_TIMESHEETS)[0]) => void;
+  item: TimesheetFormData;
+  onEdit: (timesheet: TimesheetFormData) => void;
+  onRemove: (timesheet: TimesheetFormData) => void;
 }) {
-  const agencyId = useAuthStore((state) => state.agencyId);
-  const filteredSites = MOCK_SITES.filter((site) => agencyId === site.agencyId);
-  const site = filteredSites.find((s) => s.id === item.siteId);
+  const site = MOCK_SITES.find((s) => s.id === item.siteId);
 
   return (
     <View style={styles.timesheetItem}>

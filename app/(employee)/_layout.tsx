@@ -2,7 +2,6 @@ import { Tabs } from 'expo-router';
 import {
   LayoutDashboard,
   MapPin,
-  MessageSquare,
   Settings,
   FolderOpen,
 } from 'lucide-react-native';
@@ -34,15 +33,6 @@ export default function TabLayout() {
         options={{
           title: 'Sites',
           tabBarIcon: ({ color, size }) => <MapPin size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="messages"
-        options={{
-          title: 'Messagerie',
-          tabBarIcon: ({ color, size }) => (
-            <MessageSquare size={size} color={color} />
-          ),
         }}
       />
       <Tabs.Screen
