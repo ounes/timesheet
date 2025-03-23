@@ -133,11 +133,8 @@ const TimesheetList = ({ timesheets }: { timesheets: TimesheetWithUser[] }) => {
 };
 
 export default function TimesheetScreen() {
-  const agency = useAuthStore((state) => state.agency);
-  const workers = MOCK_WORKERS.filter((wk) => wk.agency === agency);
-  const timesheets = MOCK_TIMESHEETS.filter((ts) =>
-    workers.some((worker) => worker.id === ts.idWorker)
-  );
+  const workers = MOCK_WORKERS;
+  const timesheets = MOCK_TIMESHEETS;
 
   // Merge each timesheet with its corresponding worker
   const timesheetsWithUser: TimesheetWithUser[] = timesheets.map((ts) => ({

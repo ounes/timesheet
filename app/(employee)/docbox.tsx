@@ -5,73 +5,18 @@ import {
   Pressable,
   ScrollView,
   Image,
-  Platform,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { List, Download, FileText, File, Upload } from 'lucide-react-native';
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth';
-
-// MOCKED DATA – ajout de documents pour 2025 et 2024
-const MOCK_DOCUMENTS = [
-  {
-    id: '1',
-    name: 'Rapport Mensuel - Février 2025.pdf',
-    type: 'pdf',
-    size: '2.7 MB',
-    modified: '2025-02-20T09:00:00',
-    preview:
-      'https://images.unsplash.com/photo-1626445877884-999529b1c51a?fit=crop&w=400&h=250',
-    workerId: '2'
-  },
-  {
-    id: '2',
-    name: 'Plan Stratégique 2025.docx',
-    type: 'docx',
-    size: '1.2 MB',
-    modified: '2025-01-15T14:30:00',
-    preview: '',
-    workerId: '2'
-  },
-  {
-    id: '3',
-    name: 'Rapport Mensuel - Janvier 2024.pdf',
-    type: 'pdf',
-    size: '2.4 MB',
-    modified: '2024-02-19T10:30:00',
-    preview:
-      'https://images.unsplash.com/photo-1626445877884-999529b1c51a?fit=crop&w=400&h=250',
-    workerId: '2'
-  },
-  {
-    id: '4',
-    name: 'Planning Équipe Q1 2024.xlsx',
-    type: 'excel',
-    size: '1.8 MB',
-    modified: '2024-02-18T15:45:00',
-    preview: '',
-    workerId: '3'
-  },
-];
-
-// Fonction utilitaire pour trier et grouper les documents par année
-function groupDocumentsByYear(documents: typeof MOCK_DOCUMENTS) {
-  // Tri décroissant par date de modification
-  const sorted = [...documents].sort(
-    (a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime()
-  );
-  const groups: { [year: string]: typeof MOCK_DOCUMENTS } = {};
-  sorted.forEach((doc) => {
-    const year = new Date(doc.modified).getFullYear().toString();
-    if (!groups[year]) groups[year] = [];
-    groups[year].push(doc);
-  });
-  return groups;
-}
+import { Document } from '../shared/ui/types';
+import { MOCK_DOCUMENTS } from '@/store/mock_data';
+import { groupDocumentsByYear } from '../shared/utils';
 
 interface DocumentListProps {
-  documents: typeof MOCK_DOCUMENTS;
+  documents: Document[];
   selectedDocument: string | null;
   onSelectDocument: (id: string) => void;
 }
@@ -84,7 +29,7 @@ function DocumentList({
   const groups = groupDocumentsByYear(documents);
 
   // Rendu d'un document en mode liste avec boutons à droite si sélectionné
-  const renderListItem = (document: (typeof MOCK_DOCUMENTS)[0]) => (
+  const renderListItem = (document: Document) => (
     <Pressable
       key={document.id}
       style={[
@@ -153,12 +98,6 @@ export default function DocBoxScreen() {
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <Text style={styles.title}>Mes documents</Text>
-            </View>
-            <View style={styles.headerRight}>
-              {/* Grid mode removed – list mode is now the default view */}
-              <Pressable style={[styles.viewModeButton, styles.viewModeButtonActive]}>
-                <List size={20} color="#1A73E8" />
-              </Pressable>
             </View>
           </View>
 

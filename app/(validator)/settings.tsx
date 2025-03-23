@@ -2,12 +2,12 @@ import { View, Text, StyleSheet, Switch, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
-  Bell,
   Moon,
   Globe,
-  Shield,
   ChevronRight,
   LogOut,
+  UserPen,
+  Info,
 } from 'lucide-react-native';
 import { useAuthStore } from '@/store/auth';
 
@@ -92,10 +92,8 @@ export default function SettingsScreen() {
           Préférences
         </Text>
         {renderSettingItem({
-          icon: <Bell size={24} color={isDark ? '#ffffff' : '#000000'} />,
-          title: 'Notifications',
-          hasSwitch: true,
-          switchValue: true,
+          icon: <UserPen size={24} color={isDark ? '#ffffff' : '#000000'} />,
+          title: 'Profil',
         })}
         {renderSettingItem({
           icon: <Moon size={24} color={isDark ? '#ffffff' : '#000000'} />,
@@ -119,8 +117,8 @@ export default function SettingsScreen() {
           title: 'Langue',
         })}
         {renderSettingItem({
-          icon: <Shield size={24} color={isDark ? '#ffffff' : '#000000'} />,
-          title: 'Sécurité',
+          icon: <Info size={24} color={isDark ? '#ffffff' : '#000000'} />,
+          title: 'A propos',
         })}
       </View>
 
@@ -180,3 +178,5 @@ const styles = StyleSheet.create({
     marginLeft: 15,
   },
 });
+
+export {};

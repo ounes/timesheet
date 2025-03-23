@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/auth';
 import { LogIn } from 'lucide-react-native';
+import { Role } from '../shared/ui/types';
 
 export default function LoginScreen() {
   const [username, setUsername] = useState('');
@@ -18,7 +19,7 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
-  const role = useAuthStore((state) => state.role);
+  const role = useAuthStore((state) => state.role) as Role;
 
   const handleLogin = async () => {
     if (!username || !password) {

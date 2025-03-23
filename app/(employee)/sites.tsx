@@ -1,91 +1,75 @@
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  Platform,
+  Pressable,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MapPin, Calendar, Phone, User, Info } from 'lucide-react-native';
+import { ChevronRight } from 'lucide-react-native';
 import { useAuthStore } from '@/store/auth';
+import { Site } from '../shared/ui/types';
+import { MOCK_AGENCIES, MOCK_SITES, MOCK_WORKERS, REFERENT_INFO } from '@/store/mock_data';
+import { ContactSection } from '../shared/business/contact-section.component';
+import { SiteCard } from '../shared/business/site-card.component';
 
-const MOCK_SITES = [
-  {
-    id: '1',
-    name: 'Chantier Paris Centre',
-    chef: 'Phillipe Laurent',
-    address: '123 Rue de Rivoli, 75001 Paris',
-    contact: '01.25.36.98.54',
-    startDate: '2024-01-15',
-    endDate: '2024-06-30',
-    image:
-      'https://images.unsplash.com/photo-1488972685288-c3fd157d7c7a?auto=format&fit=crop&q=80&w=800&h=400',
-    notes: 'Prendre la A46',
-    agencyId: 'societe1'
-  },
-];
+type ReferentSectionProps = {
+  onSelectReferent: () => void;
+};
 
-function SiteCard({ site }: { site: (typeof MOCK_SITES)[0] }) {
+function ReferentSection({ onSelectReferent }: ReferentSectionProps): JSX.Element {
   return (
-    <View style={styles.siteCard}>
-      <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: site.image }}
-          style={styles.siteImage}
-          resizeMode="cover"
-        />
+    <Pressable style={styles.referentSection} onPress={onSelectReferent}>
+      <View style={styles.referentInfo}>
+        <Text style={styles.referentName}>{REFERENT_INFO.name}</Text>
+        <Text style={styles.referentTitle}>{REFERENT_INFO.title}</Text>
       </View>
-      <View style={styles.siteContent}>
-        <Text style={styles.siteName}>{site.name}</Text>
-        <View style={styles.siteInfo}>
-          <User size={16} color="#666666" />
-          <Text style={styles.siteAddress}>{site.chef}</Text>
-        </View>
-        <View style={styles.siteInfo}>
-          <MapPin size={16} color="#666666" />
-          <Text style={styles.siteAddress}>{site.address}</Text>
-        </View>
-        <View style={styles.siteInfo}>
-          <Phone size={16} color="#666666" />
-          <Text style={styles.siteAddress}>{site.contact}</Text>
-        </View>
-        <View style={styles.siteInfo}>
-          <View style={styles.dateInfo}>
-            <Calendar size={16} color="#666666" />
-            <Text style={styles.dateText}>
-              {new Date(site.startDate).toLocaleDateString('fr-FR', {
-                day: 'numeric',
-                month: 'short',
-              })}
-              {' - '}
-              {new Date(site.endDate).toLocaleDateString('fr-FR', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-              })}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.dateContainer}>
-          <View style={styles.siteInfo}>
-            <Info size={16} color="#666666" />
-            <Text style={styles.siteAddress}>{site.notes}</Text>
-          </View>
-        </View>
-      </View>
-    </View>
+      <ChevronRight size={20} color="#666666" />
+    </Pressable>
   );
 }
 
-export default function SitesScreen() {
+export default function SitesScreen(): JSX.Element {
+  const [selectedContact, setSelectedContact] = useState<string | null>(null);
+  const userId = useAuthStore((state) => state.id);
   const agencyId = useAuthStore((state) => state.agencyId);
-  const filteredSites = MOCK_SITES.filter((site) => agencyId === site.agencyId);
+  const agency = MOCK_AGENCIES.find((ag) => ag.id === agencyId);
+
+  // Récupération des sites de l'utilisateur
+  const userSites: string[] = MOCK_WORKERS
+    .filter((wk) => wk.id.includes(userId as string))
+    .flatMap((wk) => wk.siteIds);
+  const filteredSites: Site[] = MOCK_SITES.filter(
+    (site) => site.agencyId === agencyId && userSites.includes(site.id)
+  );
+
+  // Gestion de la sélection du référent
+  const handleReferentSelect = (): void => {
+    setSelectedContact(selectedContact === REFERENT_INFO.id ? null : REFERENT_INFO.id);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Sites</Text>
-          <Text style={styles.subtitle}>Vos sites en cours</Text>
-        </View>
-
-        <View style={styles.sitesContainer}>
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        {/* Section Informations du Site */}
+        <View style={styles.siteInfoSection}>
+          <Text style={styles.sectionTitle}>Informations du Site</Text>
           {filteredSites.map((site) => (
             <SiteCard key={site.id} site={site} />
           ))}
+        </View>
+
+        {/* Section Références et Contacts */}
+        <View style={styles.referencesSection}>
+          <Text style={styles.sectionTitle}>Contact sur Site</Text>
+          <ReferentSection onSelectReferent={handleReferentSelect} />
+          <ContactSection
+            contactMail={agency?.email || ''}
+            contactPhone={agency?.phone || ''}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -95,76 +79,68 @@ export default function SitesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F9F9F9',
   },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
+  contentContainer: {
     padding: 20,
-    backgroundColor: '#FFFFFF',
+    paddingBottom: 40,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: '700',
     color: '#333333',
-    marginBottom: 4,
+    marginBottom: 16,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666666',
-  },
-  sitesContainer: {
-    padding: 20,
-    gap: 20,
-  },
-  siteCard: {
+  siteInfoSection: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  imageContainer: {
-    height: 200,
-    width: '100%',
-    backgroundColor: '#F5F5F5',
+  referencesSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  siteImage: {
-    width: '100%',
-    height: '100%',
-  },
-  siteContent: {
-    padding: 16,
-  },
-  siteName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 8,
-  },
-  siteInfo: {
+  referentSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
+    backgroundColor: '#E3F2FD',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
   },
-  siteAddress: {
-    fontSize: 14,
-    color: '#666666',
+  referentAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 12,
+  },
+  referentInfo: {
     flex: 1,
   },
-  dateContainer: {
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    paddingTop: 12,
+  referentName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1565C0',
+    marginBottom: 2,
   },
-  dateInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dateText: {
+  referentTitle: {
     fontSize: 14,
     color: '#666666',
   },

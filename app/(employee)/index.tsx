@@ -1,3 +1,4 @@
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -5,668 +6,82 @@ import {
   ScrollView,
   Pressable,
   FlatList,
-  TextInput,
-  Platform,
-  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/auth';
+import { Clock, CircleAlert as AlertCircle } from 'lucide-react-native';
 import {
-  Clock,
-  CircleAlert as AlertCircle,
-  Calendar,
-  Pencil,
-  Trash,
-  Save,
-  X,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Building2,
-  Info,
-} from 'lucide-react-native';
-import { useState, useMemo } from 'react';
-import DateTimePicker from '@react-native-community/datetimepicker';
-
-const MOCK_SITES = [
-  {
-    id: '1',
-    name: 'Chantier Paris Centre',
-    type: 'Chantier',
-    address: '123 Rue de Rivoli, 75001 Paris',
-    agencyId: 'societe1'
-  },
-  {
-    id: '2',
-    name: 'Bureau Lyon',
-    type: 'Bureau',
-    address: '45 Avenue Jean Jaurès, 69007 Lyon',
-    agencyId: 'societe1'
-  },
-  {
-    id: '3',
-    name: 'Site Marseille Port',
-    type: 'Site Industriel',
-    address: '88 Quai du Port, 13002 Marseille',
-    agencyId: 'societe1'
-  },
-  // duplicated for scroll test...
-  {
-    id: '4',
-    name: 'Chantier Lille Centre',
-    type: 'Chantier',
-    address: '10 Rue de Lille, 59000 Lille',
-    agencyId: 'societe1'
-  },
-  {
-    id: '5',
-    name: 'Bureau Nantes',
-    type: 'Bureau',
-    address: '25 Rue de Nantes, 44000 Nantes',
-    agencyId: 'societe1'
-  },
-];
-
-const MOCK_TIMESHEETS = [
-  {
-    id: '1',
-    date: '2025-03-19',
-    siteId: '1',
-    hours: 8,
-    hoursSup: 1,
-    notes: 'Installation des équipements électriques',
-    status: 'Validé',
-    panier: false,
-    trajetId: '',
-    transportId: '',
-    workerId: '2'
-  },
-  {
-    id: '2',
-    date: '2025-02-16',
-    siteId: '2',
-    hours: 7.5,
-    hoursSup: 0,
-    notes: 'Réunion de coordination',
-    status: 'En attente',
-    panier: false,
-    trajetId: '',
-    transportId: '',
-    workerId: '2'
-  },
-  {
-    id: '3',
-    date: '2025-02-15',
-    siteId: '3',
-    hours: 8.5,
-    hoursSup: 2,
-    notes: 'Maintenance préventive',
-    status: 'Validé',
-    panier: false,
-    trajetId: '',
-    transportId: '',
-    workerId: '2'
-  },
-];
-
-const MOCK_TRAJETS = Array.from({ length: 8 }, (_, i) => ({
-  id: (i + 1).toString(),
-  label: `Trajet ${i + 1}`,
-}));
-
-const MOCK_TRANSPORTS = Array.from({ length: 8 }, (_, i) => ({
-  id: (i + 1).toString(),
-  label: `Transport ${i + 1}`,
-}));
-
-function KPICard({
-  icon,
-  title,
-  value,
-  subtitle,
-  accentColor = '#007AFF',
-}: {
-  icon: React.ReactNode;
-  title: string;
-  value: string;
-  subtitle?: string;
-  accentColor?: string;
-}) {
-  return (
-    <View style={[styles.kpiCard, { borderLeftColor: accentColor }]}>
-      <View style={styles.kpiIconContainer}>{icon}</View>
-      <View style={styles.kpiContent}>
-        <Text style={styles.kpiTitle}>{title}</Text>
-        <Text style={styles.kpiValue}>{value}</Text>
-        {subtitle && <Text style={styles.kpiSubtitle}>{subtitle}</Text>}
-      </View>
-    </View>
-  );
-}
-
-interface TimesheetFormData {
-  workerId: string | null;
-  id?: string;
-  date: Date;
-  siteId: string;
-  hours: string;
-  hoursSup: string;
-  notes: string | undefined;
-  panier: boolean;
-  trajetId: string | null;
-  transportId: string | null;
-  status?: string;
-}
-
-function TimesheetForm({
-  onSubmit,
-  onCancel,
-  initialData,
-}: {
-  onSubmit: (data: TimesheetFormData) => void;
-  onCancel: () => void;
-  initialData?: (typeof MOCK_TIMESHEETS)[0];
-}) {
-  const userId = useAuthStore((state) => state.id);
-  const agencyId = useAuthStore((state) => state.agencyId);
-  const filteredSites = MOCK_SITES.filter((site) => agencyId === site.agencyId);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showSiteSelector, setShowSiteSelector] = useState(false);
-  const [showTrajetSelector, setShowTrajetSelector] = useState(false);
-  const [showTransportSelector, setShowTransportSelector] = useState(false);
-
-  const [formData, setFormData] = useState<TimesheetFormData>({
-    date: initialData ? new Date(initialData.date) : new Date(),
-    siteId: initialData?.siteId || '',
-    hours: initialData?.hours.toString() || '',
-    hoursSup: initialData?.hoursSup.toString() || '',
-    notes: initialData?.notes || '',
-    panier: initialData?.panier || false,
-    trajetId: initialData?.trajetId || '',
-    transportId: initialData?.transportId || '',
-    workerId: initialData?.workerId || userId,
-  });
-
-  const selectedSite = filteredSites.find((site) => site.id === formData.siteId);
-  const selectedTrajet = MOCK_TRAJETS.find(
-    (trajet) => trajet.id === formData.trajetId
-  );
-  const selectedTransport = MOCK_TRANSPORTS.find(
-    (transport) => transport.id === formData.transportId
-  );
-
-  const handleSubmit = () => {
-    if (!formData.hours || !formData.siteId) return;
-    onSubmit({
-      ...formData,
-      id: initialData?.id,
-    });
-  };
-
-  return (
-    <View style={styles.formCard}>
-      <Text style={styles.formTitle}>
-        {initialData
-          ? 'Modifier la Feuille de Temps'
-          : 'Nouvelle Feuille de Temps'}
-      </Text>
-
-      {/* Date selection rendered inline */}
-      <Pressable
-        style={styles.datePickerButton}
-        onPress={() => setShowDatePicker(!showDatePicker)}
-      >
-        <Calendar size={20} color="#666666" />
-        <Text style={styles.datePickerText}>
-          {formData.date.toLocaleDateString('fr-FR', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          })}
-        </Text>
-        <ChevronDown size={20} color="#666666" />
-      </Pressable>
-      {showDatePicker && (
-        <>
-          {Platform.OS !== 'web' ? (
-            <DateTimePicker
-              value={formData.date}
-              mode="date"
-              display="inline"
-              onChange={(event, selectedDate) => {
-                if (selectedDate) {
-                  setFormData((prev) => ({ ...prev, date: selectedDate }));
-                }
-              }}
-            />
-          ) : (
-            <input
-              type="date"
-              value={formData.date.toISOString().split('T')[0]}
-              onChange={(e) => {
-                setFormData((prev) => ({
-                  ...prev,
-                  date: new Date(e.target.value),
-                }));
-              }}
-              onReset={(e) => {
-                setFormData((prev) => ({
-                  ...prev,
-                  date: new Date(),
-                }));
-              }}
-              style={styles.webDatePicker}
-            />
-          )}
-        </>
-      )}
-
-      {/* Inline Site selector */}
-      <View style={styles.formRow}>
-        <View style={styles.formLabelContainer}>
-          <Text style={styles.formLabel}>Site de Travail</Text>
-          <View style={styles.infoContainer}>
-            <Info size={16} color="#666666" />
-            <Text style={styles.infoText}>
-              Sélectionnez le site où vous avez travaillé
-            </Text>
-          </View>
-        </View>
-        <Pressable
-          style={[
-            styles.siteSelector,
-            !formData.siteId && styles.siteSelectorEmpty,
-          ]}
-          onPress={() => setShowSiteSelector(!showSiteSelector)}
-        >
-          {selectedSite ? (
-            <View style={styles.selectedSiteContent}>
-              <Building2 size={30} color="#333333" />
-              <View style={styles.selectedSiteInfo}>
-                <Text style={styles.siteSelectorText}>{selectedSite.name}</Text>
-                <Text style={styles.siteAddress}>
-                  {selectedSite.type} • {selectedSite.address}
-                </Text>
-              </View>
-            </View>
-          ) : (
-            <Text style={styles.siteSelectorPlaceholder}>
-              Sélectionner votre site de travail
-            </Text>
-          )}
-          <ChevronDown size={20} color="#666666" />
-        </Pressable>
-        {showSiteSelector && (
-          <ScrollView style={styles.selectorList} nestedScrollEnabled>
-            {filteredSites.map((site) => (
-              <Pressable
-                key={site.id}
-                style={[
-                  styles.siteOption,
-                  site.id === formData.siteId && styles.siteOptionActive,
-                ]}
-                onPress={() => {
-                  setFormData((prev) => ({ ...prev, siteId: site.id }));
-                  setShowSiteSelector(false);
-                }}
-              >
-                <Building2
-                  size={20}
-                  color={site.id === formData.siteId ? '#007AFF' : '#666666'}
-                />
-                <View style={styles.siteOptionContent}>
-                  <Text
-                    style={[
-                      styles.siteOptionText,
-                      site.id === formData.siteId && styles.siteOptionSelected,
-                    ]}
-                  >
-                    {site.name}
-                  </Text>
-                  <Text style={styles.siteOptionAddress}>
-                    {site.type} • {site.address}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )}
-      </View>
-
-      <View style={styles.formRow}>
-        <Text style={styles.formLabel}>Heures</Text>
-        <TextInput
-          style={styles.formInput}
-          value={formData.hours}
-          onChangeText={(value) =>
-            setFormData((prev) => ({ ...prev, hours: value }))
-          }
-          keyboardType="numeric"
-          placeholder="0.0"
-          maxLength={4}
-        />
-      </View>
-
-      <View style={styles.formRow}>
-        <Text style={styles.formLabel}>Heures de nuit</Text>
-        <TextInput
-          style={styles.formInput}
-          value={formData.hoursSup}
-          onChangeText={(value) =>
-            setFormData((prev) => ({ ...prev, hoursSup: value }))
-          }
-          keyboardType="numeric"
-          placeholder="0.0"
-          maxLength={4}
-        />
-      </View>
-
-      <View style={styles.formRow}>
-        <Text style={styles.formLabel}>Panier</Text>
-        <Switch
-          value={formData.panier}
-          onValueChange={(value) =>
-            setFormData((prev) => ({ ...prev, panier: value }))
-          }
-        />
-      </View>
-
-      {/* Inline Trajet selector */}
-      <View style={styles.formRow}>
-        <Text style={styles.formLabel}>Trajet</Text>
-        <Pressable
-          style={[
-            styles.siteSelector,
-            !formData.trajetId && styles.siteSelectorEmpty,
-          ]}
-          onPress={() => setShowTrajetSelector(!showTrajetSelector)}
-        >
-          {selectedTrajet ? (
-            <Text style={styles.siteSelectorText}>{selectedTrajet.label}</Text>
-          ) : (
-            <Text style={styles.siteSelectorPlaceholder}>
-              Sélectionner un trajet (optionnel)
-            </Text>
-          )}
-          <ChevronDown size={20} color="#666666" />
-        </Pressable>
-        {showTrajetSelector && (
-          <ScrollView style={styles.selectorList} nestedScrollEnabled>
-            {MOCK_TRAJETS.map((trajet) => (
-              <Pressable
-                key={trajet.id}
-                style={[
-                  styles.siteOption,
-                  trajet.id === formData.trajetId && styles.siteOptionActive,
-                ]}
-                onPress={() => {
-                  setFormData((prev) => ({
-                    ...prev,
-                    trajetId: trajet.id,
-                  }));
-                  setShowTrajetSelector(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.siteOptionText,
-                    trajet.id === formData.trajetId && styles.siteOptionSelected,
-                  ]}
-                >
-                  {trajet.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )}
-      </View>
-
-      {/* Inline Transport selector */}
-      <View style={styles.formRow}>
-        <Text style={styles.formLabel}>Transport</Text>
-        <Pressable
-          style={[
-            styles.siteSelector,
-            !formData.transportId && styles.siteSelectorEmpty,
-          ]}
-          onPress={() => setShowTransportSelector(!showTransportSelector)}
-        >
-          {selectedTransport ? (
-            <Text style={styles.siteSelectorText}>
-              {selectedTransport.label}
-            </Text>
-          ) : (
-            <Text style={styles.siteSelectorPlaceholder}>
-              Sélectionner un transport (optionnel)
-            </Text>
-          )}
-          <ChevronDown size={20} color="#666666" />
-        </Pressable>
-        {showTransportSelector && (
-          <ScrollView style={styles.selectorList} nestedScrollEnabled>
-            {MOCK_TRANSPORTS.map((transport) => (
-              <Pressable
-                key={transport.id}
-                style={[
-                  styles.siteOption,
-                  transport.id === formData.transportId &&
-                    styles.siteOptionActive,
-                ]}
-                onPress={() => {
-                  setFormData((prev) => ({
-                    ...prev,
-                    transportId: transport.id,
-                  }));
-                  setShowTransportSelector(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.siteOptionText,
-                    transport.id === formData.transportId &&
-                      styles.siteOptionSelected,
-                  ]}
-                >
-                  {transport.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )}
-      </View>
-
-      <View style={styles.formRow}>
-        <Text style={styles.formLabel}>Notes</Text>
-        <TextInput
-          style={[styles.formInput, styles.formTextArea]}
-          value={formData.notes}
-          onChangeText={(value) =>
-            setFormData((prev) => ({ ...prev, notes: value }))
-          }
-          placeholder="Ajouter des notes (optionnel)"
-          multiline
-          numberOfLines={3}
-        />
-      </View>
-
-      <View style={styles.formActions}>
-        <Pressable
-          style={[styles.formButton, styles.cancelButton]}
-          onPress={onCancel}
-        >
-          <X size={20} color="#666666" />
-          <Text style={styles.cancelButtonText}>Annuler</Text>
-        </Pressable>
-        <Pressable
-          style={[
-            styles.formButton,
-            styles.submitButton,
-            (!formData.hours || !formData.siteId) &&
-              styles.submitButtonDisabled,
-          ]}
-          onPress={handleSubmit}
-          disabled={!formData.hours || !formData.siteId}
-        >
-          <Save size={20} color="#FFFFFF" />
-          <Text style={styles.submitButtonText}>
-            {initialData ? 'Enregistrer' : 'Ajouter'}
-          </Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-function TimesheetItem({
-  item,
-  onEdit,
-  onRemove,
-}: {
-  item: (typeof MOCK_TIMESHEETS)[0];
-  onEdit: (timesheet: (typeof MOCK_TIMESHEETS)[0]) => void;
-  onRemove: (timesheet: (typeof MOCK_TIMESHEETS)[0]) => void;
-}) {
-  const agencyId = useAuthStore((state) => state.agencyId);
-  const filteredSites = MOCK_SITES.filter((site) => agencyId === site.agencyId);
-  const site = filteredSites.find((s) => s.id === item.siteId);
-
-  return (
-    <View style={styles.timesheetItem}>
-      <View style={styles.timesheetMain}>
-        <View style={styles.timesheetContent}>
-          <View style={styles.timesheetHeader}>
-            <Text style={styles.timesheetDate}>
-              {new Date(item.date).toLocaleDateString('fr-FR', {
-                day: 'numeric',
-                month: 'long',
-              })}
-            </Text>
-            {item.status === 'En attente' && (
-              <View style={styles.timesheetHeader}>
-                <Pressable
-                  style={styles.editButton}
-                  onPress={() => onEdit(item)}
-                >
-                  <Pencil size={16} color="#007AFF" />
-                </Pressable>
-                <Pressable
-                  style={styles.editButton}
-                  onPress={() => onRemove(item)}
-                >
-                  <Trash size={16} color="#007AFF" />
-                </Pressable>
-              </View>
-            )}
-          </View>
-          <Text style={styles.timesheetSite}>{site?.name}</Text>
-          {item.notes && (
-            <Text style={styles.timesheetNotes}>{item.notes}</Text>
-          )}
-        </View>
-        <View style={styles.timesheetRight}>
-          <View
-            style={[
-              styles.statusBadge,
-              {
-                backgroundColor:
-                  item.status === 'Validé' ? '#E8F5E9' : '#FFF3E0',
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.statusText,
-                {
-                  color: item.status === 'Validé' ? '#2E7D32' : '#F57C00',
-                },
-              ]}
-            >
-              {item.status}
-            </Text>
-          </View>
-          <Text style={styles.timesheetHours}>
-            {item.hours + item.hoursSup}h
-          </Text>
-          {item.hoursSup ? (
-            <Text style={styles.kpiSubtitle}>
-              dont {item.hoursSup}h de nuit
-            </Text>
-          ) : null}
-        </View>
-      </View>
-    </View>
-  );
-}
-
-// Helper functions for week navigation
-function getStartOfWeek(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - (day === 0 ? 6 : day - 1);
-  return new Date(d.setDate(diff));
-}
-
-function formatWeekLabel(weekStart: Date): string {
-  const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
-  return `Semaine du ${weekStart.toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-  })} au ${weekEnd.toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-  })}`;
-}
+  MOCK_SITES,
+  MOCK_TIMESHEETS,
+  MOCK_TRAJETS,
+  MOCK_TRANSPORTS,
+} from '@/store/mock_data';
+import {
+  getEndOfMonth,
+  getStartOfMonth,
+  getStartOfWeek,
+} from '../shared/utils';
+import { TimesheetFormData } from '../shared/ui/types';
+import { KPICard } from '../shared/business/kpi-card.componenet';
+import { TimesheetForm } from '../shared/business/timesheet-form.component';
+import { TimesheetItem } from '../shared/business/timesheet-item.component';
+import theme from '../shared/ui/theme';
+import CustomCalendar from '../shared/business/calendar.component';
 
 export default function DashboardScreen() {
   const userId = useAuthStore((state) => state.id);
-  const filteredTimesheet = MOCK_TIMESHEETS.filter((ts) => userId === ts.workerId);
+  const filteredTimesheet = MOCK_TIMESHEETS.filter(
+    (ts) => userId === ts.workerId
+  );
   const [showForm, setShowForm] = useState(false);
-  const [editingTimesheet, setEditingTimesheet] = useState<
-    (typeof MOCK_TIMESHEETS)[0] | null
-  >(null);
-  const [timesheets, setTimesheets] = useState(filteredTimesheet);
-  const [selectedWeek, setSelectedWeek] = useState(getStartOfWeek(new Date()));
+  const [editingTimesheet, setEditingTimesheet] = useState<TimesheetFormData>();
+  const [timesheets, setTimesheets] = useState<TimesheetFormData[]>(filteredTimesheet);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
 
-  const weekEnd = new Date(selectedWeek.getTime() + 7 * 24 * 60 * 60 * 1000);
+  // Determine period boundaries based on the view mode.
+  const selectedStart = useMemo(
+    () =>
+      viewMode === 'week'
+        ? getStartOfWeek(selectedDate)
+        : getStartOfMonth(selectedDate),
+    [viewMode, selectedDate]
+  );
 
-  const weeklyTimesheets = useMemo(() => {
-    return timesheets.filter((ts) => {
-      const tsDate = new Date(ts.date);
-      return tsDate >= selectedWeek && tsDate < weekEnd;
-    });
-  }, [timesheets, selectedWeek, weekEnd]);
+  const selectedEnd = useMemo(
+    () =>
+      viewMode === 'week'
+        ? new Date(selectedStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+        : getEndOfMonth(selectedStart),
+    [viewMode, selectedStart]
+  );
 
-  const weeklyHours = useMemo(() => {
-    return weeklyTimesheets.reduce((acc, curr) => acc + curr.hours, 0);
-  }, [weeklyTimesheets]);
+  const periodTimesheets = useMemo(
+    () =>
+      timesheets.filter((ts) => {
+        const tsDate = new Date(ts.date);
+        return tsDate >= selectedStart && tsDate < selectedEnd;
+      }),
+    [timesheets, selectedStart, selectedEnd]
+  );
 
-  const weeklyHoursSup = useMemo(() => {
-    return weeklyTimesheets.reduce((acc, curr) => acc + curr.hoursSup, 0);
-  }, [weeklyTimesheets]);
+  const periodHours = useMemo(() => {
+    return periodTimesheets.reduce((acc, curr) => acc + curr.hours, 0);
+  }, [periodTimesheets]);
+
+  const periodHoursSup = useMemo(() => {
+    return periodTimesheets.reduce((acc, curr) => acc + curr.hoursSup, 0);
+  }, [periodTimesheets]);
 
   const pendingCount = useMemo(() => {
-    return weeklyTimesheets.filter(
-      (timesheet) => timesheet.status === 'En attente'
-    ).length;
-  }, [weeklyTimesheets]);
+    return periodTimesheets.filter((ts) => ts.status === 'En attente').length;
+  }, [periodTimesheets]);
 
   const sortedTimesheets = useMemo(() => {
-    return [...weeklyTimesheets].sort(
+    return [...periodTimesheets].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
-  }, [weeklyTimesheets]);
-
-  const handlePreviousWeek = () => {
-    setSelectedWeek(new Date(selectedWeek.getTime() - 7 * 24 * 60 * 60 * 1000));
-  };
-
-  const handleNextWeek = () => {
-    setSelectedWeek(new Date(selectedWeek.getTime() + 7 * 24 * 60 * 60 * 1000));
-  };
-
-  const handleThisWeek = () => {
-    setSelectedWeek(getStartOfWeek(new Date()));
-  };
+  }, [periodTimesheets]);
 
   const handleSubmit = (data: TimesheetFormData) => {
     if (editingTimesheet) {
@@ -675,34 +90,40 @@ export default function DashboardScreen() {
           ts.id === editingTimesheet.id
             ? {
                 ...ts,
-                date: data.date.toISOString().split('T')[0],
+                date:
+                  data.date instanceof Date
+                    ? data.date.toISOString().split('T')[0]
+                    : data.date,
                 siteId: data.siteId,
-                hours: parseFloat(data.hours) || 0,
-                hoursSup: parseFloat(data.hoursSup) || 0,
+                hours: data.hours || 0,
+                hoursSup: data.hoursSup || 0,
                 notes: data.notes || '',
                 panier: data.panier || false,
                 trajetId: data.trajetId || '',
                 transportId: data.transportId || '',
-                workerId: data.workerId || ''
+                workerId: data.workerId || '',
               }
             : ts
         )
       );
-      setEditingTimesheet(null);
+      setEditingTimesheet(undefined);
     } else {
       setTimesheets((prev) => [
         {
           id: Date.now().toString(),
-          date: data.date.toISOString().split('T')[0],
+          date:
+            data.date instanceof Date
+              ? data.date.toISOString().split('T')[0]
+              : data.date,
           siteId: data.siteId,
-          hours: parseFloat(data.hours) || 0,
-          hoursSup: parseFloat(data.hoursSup) || 0,
+          hours: data.hours || 0,
+          hoursSup: data.hoursSup || 0,
           notes: data.notes || '',
           status: 'En attente',
           panier: data.panier || false,
           trajetId: data.trajetId || '',
           transportId: data.transportId || '',
-          workerId: data.workerId || ''
+          workerId: data.workerId || '',
         },
         ...prev,
       ]);
@@ -713,41 +134,38 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Tableau de Bord</Text>
           <Text style={styles.subtitle}>Aperçu de vos activités</Text>
         </View>
 
-        <View style={styles.weekNavigation}>
-          <Pressable onPress={handlePreviousWeek} style={styles.weekNavButton}>
-            <ChevronLeft size={24} color="#007AFF" />
-          </Pressable>
-          <Text style={styles.weekLabel}>{formatWeekLabel(selectedWeek)}</Text>
-          <Pressable onPress={handleNextWeek} style={styles.weekNavButton}>
-            <ChevronRight size={24} color="#007AFF" />
-          </Pressable>
-          <Pressable onPress={handleThisWeek} style={styles.thisWeekButton}>
-            <Text style={styles.thisWeekText}>Cette semaine</Text>
-          </Pressable>
-        </View>
+        <CustomCalendar
+          initialDate={selectedDate}
+          initialViewMode="week"
+          onDateChange={(date) => setSelectedDate(date)}
+          onViewModeChange={(mode) => setViewMode(mode)}
+        />
 
+        {/* KPI Cards */}
         <View style={styles.kpiContainer}>
           <KPICard
-            icon={<Clock size={24} color="#007AFF" />}
-            title="Heures cette semaine"
-            value={`${weeklyHours + weeklyHoursSup}h`}
-            subtitle={`dont ${weeklyHoursSup}h de nuit`}
-            accentColor="#007AFF"
+            icon={<Clock size={24} color={theme.colors.primary} />}
+            title="Heures"
+            value={`${periodHours + periodHoursSup}h`}
+            subtitle={`dont ${periodHoursSup}h de nuit`}
+            accentColor={theme.colors.primary}
           />
           <KPICard
-            icon={<AlertCircle size={24} color="#F57C00" />}
-            title="En attente de validation"
+            icon={<AlertCircle size={24} color={theme.colors.accent} />}
+            title="En attente"
             value={pendingCount.toString()}
             subtitle="Relevé d'heure"
-            accentColor="#F57C00"
+            accentColor={theme.colors.accent}
           />
         </View>
 
+        {/* Timesheet History Section */}
         <View style={styles.timesheetSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Historique</Text>
@@ -755,7 +173,7 @@ export default function DashboardScreen() {
               <Pressable
                 style={styles.addButton}
                 onPress={() => {
-                  setEditingTimesheet(null);
+                  setEditingTimesheet(undefined);
                   setShowForm(true);
                 }}
               >
@@ -769,9 +187,12 @@ export default function DashboardScreen() {
               onSubmit={handleSubmit}
               onCancel={() => {
                 setShowForm(false);
-                setEditingTimesheet(null);
+                setEditingTimesheet(undefined);
               }}
               initialData={editingTimesheet || undefined}
+              sites={MOCK_SITES}
+              trajets={MOCK_TRAJETS}
+              transports={MOCK_TRANSPORTS}
             />
           )}
 
@@ -789,9 +210,10 @@ export default function DashboardScreen() {
                     prevTimesheets.filter((time) => time.id !== timesheet.id)
                   );
                 }}
+                sites={MOCK_SITES}
               />
             )}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.id as string}
             scrollEnabled={false}
           />
         </View>
@@ -801,358 +223,132 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollView: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  scrollView: { flex: 1 },
   header: {
-    padding: 20,
-    backgroundColor: '#FFFFFF',
+    padding: theme.spacing.large,
+    backgroundColor: theme.colors.background,
   },
   title: {
-    fontSize: 28,
+    fontSize: theme.fontSizes.title,
     fontWeight: 'bold',
-    color: '#333333',
+    color: theme.colors.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666666',
+    fontSize: theme.fontSizes.subtitle,
+    color: theme.colors.textSecondary,
   },
   kpiContainer: {
-    paddingHorizontal: 20,
-    gap: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: theme.spacing.large,
+    marginBottom: theme.spacing.medium,
   },
-  kpiCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+  calendarHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-    borderLeftWidth: 4,
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.large,
+    marginBottom: theme.spacing.small,
   },
-  kpiIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  kpiContent: {
-    flex: 1,
-  },
-  kpiTitle: {
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 4,
-  },
-  kpiValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 2,
-  },
-  kpiSubtitle: {
-    fontSize: 12,
-    color: '#666666',
-  },
-  weekNavigation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    gap: 8,
-  },
-  weekNavButton: {
-    padding: 8,
-  },
-  weekLabel: {
-    fontSize: 16,
+  navButton: { padding: theme.spacing.small },
+  periodLabel: {
+    fontSize: theme.fontSizes.periodLabel,
     fontWeight: '600',
-    flex: 1,
     textAlign: 'center',
-    color: '#333333',
+    color: theme.colors.textPrimary,
   },
-  thisWeekButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+  calendarControls: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.large,
+    marginBottom: theme.spacing.small,
   },
-  thisWeekText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+  toggleContainer: { flexDirection: 'row' },
+  toggleButton: {
+    paddingHorizontal: theme.spacing.medium,
+    paddingVertical: theme.spacing.small,
+    borderRadius: theme.borderRadius,
+    backgroundColor: theme.colors.cardBackground,
+    marginRight: theme.spacing.small,
+  },
+  toggleButtonActive: { backgroundColor: theme.colors.primary },
+  toggleButtonText: {
+    fontSize: theme.fontSizes.button,
+    color: theme.colors.textPrimary,
+  },
+  toggleButtonTextActive: { color: theme.colors.background, fontWeight: '600' },
+  resetButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.medium,
+    paddingVertical: theme.spacing.small,
+    borderRadius: theme.borderRadius,
+  },
+  resetButtonText: {
+    color: theme.colors.background,
+    fontSize: theme.fontSizes.button,
     fontWeight: '600',
   },
-  timesheetSection: {
-    padding: 20,
+  calendarContainer: {
+    marginHorizontal: theme.spacing.large,
+    marginBottom: theme.spacing.medium,
   },
+  yearCarouselContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.small,
+  },
+  yearArrow: { padding: theme.spacing.small },
+  yearText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  monthPickerContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  monthItem: {
+    width: '30%',
+    padding: theme.spacing.medium,
+    marginVertical: theme.spacing.small,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.borderRadius,
+    alignItems: 'center',
+  },
+  monthItemSelected: { backgroundColor: theme.colors.primary },
+  monthItemText: {
+    fontSize: theme.fontSizes.button,
+    color: theme.colors.textPrimary,
+  },
+  monthItemTextSelected: { color: theme.colors.background, fontWeight: '600' },
+  timesheetSection: { padding: theme.spacing.large },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: theme.spacing.medium,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: theme.fontSizes.sectionTitle,
     fontWeight: 'bold',
-    color: '#333333',
+    color: theme.colors.textPrimary,
   },
-  filterContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
+  filterContainer: { flexDirection: 'row' },
   addButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.medium,
+    paddingVertical: theme.spacing.small,
+    borderRadius: theme.borderRadius,
   },
   addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: theme.colors.background,
+    fontSize: theme.fontSizes.button,
     fontWeight: '600',
-  },
-  formCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333333',
-    marginBottom: 16,
-  },
-  datePickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    marginBottom: 16,
-  },
-  datePickerText: {
-    fontSize: 16,
-    color: '#333333',
-  },
-  webDatePicker: {
-    fontSize: 16,
-    padding: 8,
-    marginBottom: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  formRow: {
-    marginBottom: 16,
-  },
-  formLabelContainer: {
-    marginBottom: 8,
-  },
-  formLabel: {
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 4,
-  },
-  infoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-  },
-  infoText: {
-    fontSize: 12,
-    color: '#666666',
-    flex: 1,
-  },
-  formInput: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#333333',
-  },
-  formTextArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  siteSelector: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    padding: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  siteSelectorEmpty: {
-    borderStyle: 'dashed',
-    borderColor: '#999999',
-  },
-  selectedSiteContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  selectedSiteInfo: {
-    flex: 1,
-  },
-  siteSelectorText: {
-    fontSize: 16,
-    color: '#333333',
-    marginBottom: 2,
-  },
-  siteAddress: {
-    fontSize: 12,
-    color: '#666666',
-  },
-  siteSelectorPlaceholder: {
-    fontSize: 16,
-    color: '#999999',
-    flex: 1,
-  },
-  selectorList: {
-    maxHeight: 200,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  siteOption: {
-    padding: 12,
-    borderRadius: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  siteOptionActive: {
-    backgroundColor: '#F0F9FF',
-  },
-  siteOptionContent: {
-    flex: 1,
-  },
-  siteOptionText: {
-    fontSize: 16,
-    color: '#333333',
-    marginBottom: 2,
-  },
-  siteOptionAddress: {
-    fontSize: 12,
-    color: '#666666',
-  },
-  siteOptionSelected: {
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  formActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-    marginTop: 16,
-  },
-  formButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 8,
-  },
-  cancelButton: {
-    backgroundColor: '#F5F5F5',
-  },
-  submitButton: {
-    backgroundColor: '#007AFF',
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#CCE0FF',
-  },
-  cancelButtonText: {
-    color: '#666666',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  timesheetItem: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-  },
-  timesheetMain: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  timesheetContent: {
-    flex: 1,
-  },
-  timesheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  timesheetDate: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333333',
-  },
-  editButton: {
-    padding: 4,
-  },
-  timesheetSite: {
-    fontSize: 14,
-    color: '#666666',
-    marginTop: 4,
-  },
-  timesheetNotes: {
-    fontSize: 14,
-    color: '#666666',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  timesheetRight: {
-    alignItems: 'flex-end',
-  },
-  timesheetHours: {
-    paddingTop: 10,
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '500',
   },
 });
 
